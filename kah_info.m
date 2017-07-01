@@ -5,6 +5,7 @@ info = struct;
 info.path.kah = '/Volumes/voyteklab/common/data2/kahana_ecog_RAMphase1/';
 info.path.demfile = [info.path.kah 'Release_Metadata_20160930/RAM_subject_demographics.csv'];
 
+% current release of Kahana data
 info.release = 'r1';
 info.path.data = [info.path.kah 'session_data/experiment_data/protocols/' info.release '/subjects/'];
 
@@ -16,7 +17,8 @@ info.subj = {'R1032D', 'R1128E', 'R1156D', 'R1149N', 'R1034D', 'R1162N', 'R1033D
 % selected subjects' age, extracted from info.path.demfile
 info.age = [19, 26, 27, 28, 29, 30, 31, 33, 34, 36, 39, 42, 43, 43, 44, 47, 47, 48, 51];
 
-% extract sessions from jsoninfo
+% for each subject, extract experiments and sessions and store header,
+% data, and event paths
 for isubj = 1:numel(info.subj)
     subjcurr = info.subj{isubj};
     subjpath = [info.path.data subjcurr '/'];
@@ -40,11 +42,27 @@ end
 % remove specific ones with problems
 info.R1156D.FR1.session(4) = [];
 
-%%%%%%
-info.R1032D.FR1.session(1).bsfilt.peak = [];
-info.R1020J.FR1.session(1).bsfilt.halfbandw = [];
+%%%%%% R1032D %%%%%
+% Mostly depth electrodes. Relatively frequent epileptic events, especially
+% in depths. Very buzzy (reference noise?), removed by average referencing.
+info.R1032D.FR1.session(1).bsfilt.peak = [60, 120, 180, 240, 300, 360, 382.9, 420, 480, 540, 600.1, 660.1, 689.1, 720, 765.7, 766, 780.1];
+info.R1032D.FR1.session(1).bsfilt.halfbandw = repmat(0.5, size(info.R1032D.FR1.session(1).bsfilt.peak));
 
-info.R1020J.FR1.session(1).badchan     = {};
-info.R1020J.FR1.session(1).trlartfctflg = []; 
+info.R1032D.FR1.session(1).badchan.broken = {'LFS8', 'LID12', 'LOFD12', 'LOTD12', 'LTS8', 'RID12', 'ROFD12', 'ROTD12', 'RTS8'};
+info.R1032D.FR1.session(1).badchan.spiky     = {};
+info.R1032D.FR1.session(1).badchan.epileptic     = {};
 
+info.R1032D.FR1.session(1).badsegment = []; 
+
+%%%%%% R1128E %%%%%
+% Mostly depth electrodes. Very frequency epileptic events that are present
+% in temporal grids.
+info.R1128E.FR1.session(1).bsfilt.peak = [60, 119.9, 172.1, 179.9, 239.8, 299.7, 344.2, 359.7, 381.7, 382.3, 419.6, 459.5, 479.5, 482.7];
+info.R1128E.FR1.session(1).bsfilt.halfbandw = [0.7000 0.5000 0.5000 0.7000 0.5000 1.2000 0.5000 0.5000 0.5000 0.5000 0.8000 0.5000 0.5000 0.5000];
+
+info.R1128E.FR1.session(1).badchan.broken = {'RTRIGD10', 'RPHCD9'};
+info.R1128E.FR1.session(1).badchan.spiky     = {};
+info.R1128E.FR1.session(1).badchan.epileptic     = {};
+
+info.R1128E.FR1.session(1).badsegment = []; 
 end
