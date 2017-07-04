@@ -146,4 +146,25 @@ info.R1142N.FR1.session(1).badchan.broken = {'ALT6'};
 info.R1059J.FR1.session(1).badchan.broken = {'LDC*', 'LFB3'};
 info.R1059J.FR1.session(2).badchan.broken = {'LDC*', 'LFB3'};
 
+%%%%%% R1135E %%%%%
+% Frequent interictal events, and lots of channels show bursts of 20Hz
+% activity. RSUPPS grid goes bad in Session 3. Session 3 has lots of
+% reference noise.
+info.R1135E.FR1.session(1).badchan.broken = {'LHCD9', 'RPHCD1', 'RPHCD9', 'RSUPPS*'};
+info.R1135E.FR1.session(2).badchan.broken = {'LHCD9', 'RPHCD1', 'RPHCD9', 'RSUPPS*'};
+info.R1135E.FR1.session(3).badchan.broken = {'LHCD9', 'RPHCD1', 'RPHCD9', 'RSUPPS*'};
+info.R1135E.FR1.session(4).badchan.broken = {'LHCD9', 'RPHCD1', 'RPHCD9', 'RSUPPS*'};
+
+%%%%%% R1147P %%%%%
+% Dominated by reference noise, and different across grids. In session 2,
+% LGR grid looks clean.
+
+%%%%%% R1020J %%%%%
+% Relatively clean, some reference noise (and different across grids).
+info.R1020J.FR1.session(1).badchan.broken = {'RSTB5', 'RAH7', 'RPH7'};
+
+%%%%%% R1045E %%%%%
+% Looks very clean.
+info.R1045E.FR1.session(1).badchan.broken = {'RPHD1', 'RPHD7', 'RPTS7', 'LIFS10', 'LPHD9'};
+
 end
