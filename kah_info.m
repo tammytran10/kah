@@ -11,14 +11,16 @@ info.path.data = [info.path.kah 'session_data/experiment_data/protocols/' info.r
 
 % selected subjects for aging directional PAC + 1/f slope study
 % selected based on output of kah_parsemetadata.m
-% >= age 18, sampling rate >= 999 Hz, temporal & frontal grids, FR1 task, >
+% >= age 18, sampling rate >= 500 Hz, temporal & frontal grids, FR1 task, >
 % 20 correct trials
-info.subj = {'R1032D', 'R1128E', 'R1156D', 'R1149N', 'R1034D', 'R1162N', 'R1033D', 'R1167M', 'R1175N', 'R1154D', ...
-    'R1068J', 'R1159P', 'R1080E', 'R1142N', 'R1059J', 'R1135E', 'R1147P', 'R1020J', 'R1045E'};
-
+info.subj = {'R1032D', 'R1006P', 'R1086M', 'R1177M', 'R1128E', 'R1156D', 'R1039M', 'R1149N', 'R1034D', 'R1112M', ...
+    'R1162N', 'R1033D', 'R1167M', 'R1102P', 'R1121M', 'R1175N', 'R1060M', 'R1089P', 'R1154D', 'R1003P', ...
+    'R1053M', 'R1066P', 'R1068J', 'R1127P', 'R1159P', 'R1080E', 'R1142N', 'R1059J', 'R1067P', 'R1018P', ...
+    'R1135E', 'R1147P', 'R1001P', 'R1020J', 'R1002P', 'R1036M', 'R1045E'};
+    
 % selected subjects' age, extracted from info.path.demfile
-info.age = [19, 26, 27, 28, 29, 30, 31, 33, 34, 36, 39, 42, 43, 43, 44, 47, 47, 48, 51];
-
+info.age = [19, 20, 20, 23, 26, 27, 28, 28, 29, 29, 30, 31, 33, 34, 34, 34, 36, 36, 36, 39, 39, 39, 39, 40, 42, 43, 43, 44, 45, 47, 47, 47, 48, 48, 49, 49, 51];
+    
 % for each subject, extract experiments and sessions and store header,
 % data, and event paths
 for isubj = 1:numel(info.subj)
