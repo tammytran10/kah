@@ -18,6 +18,7 @@ info.subj = {'R1032D', 'R1006P', 'R1086M', 'R1177M', 'R1128E', 'R1156D', 'R1039M
     'R1053M', 'R1066P', 'R1068J', 'R1127P', 'R1159P', 'R1080E', 'R1142N', 'R1059J', 'R1067P', 'R1018P', ...
     'R1135E', 'R1147P', 'R1001P', 'R1020J', 'R1002P', 'R1036M', 'R1045E'};
     
+
 % selected subjects' age, extracted from info.path.demfile
 info.age = [19, 20, 20, 23, 26, 27, 28, 28, 29, 29, 30, 31, 33, 34, 34, 34, 36, 36, 36, 39, 39, 39, 39, 40, 42, 43, 43, 44, 45, 47, 47, 47, 48, 48, 49, 49, 51];
     
@@ -51,8 +52,8 @@ info.R1156D.FR1.session(4) = [];
 % in depths. Very buzzy (reference noise?), removed by average referencing.
 % Overall, not too bad.
 
-info.R1032D.FR1.session(1).bsfilt.peak = [60, 120, 180, 240]; %, 300, 360, 382.9, 420, 480, 540, 600.1, 660.1, 689.1, 720, 765.7, 766, 780.1];
-info.R1032D.FR1.session(1).bsfilt.halfbandw = repmat(0.5, size(info.R1032D.FR1.session(1).bsfilt.peak));
+info.R1032D.FR1.session(1).bsfilt.peak      = [60, 63.8, 120.1, 180, 240.1]; % Session 1 (z-thresh 2)
+info.R1032D.FR1.session(1).bsfilt.halfbandw = [0.5, 0.5, 0.5,   0.5, 0.5]; % Session 1 (z-thresh 2)
 
 info.R1032D.FR1.session(1).badchan.broken = {'LFS8x', 'LID12', 'LOFD12', 'LOTD12', 'LTS8x', 'RID12', 'ROFD12', 'ROTD12', 'RTS8x', ... % flat-line channels
     };
@@ -66,14 +67,13 @@ info.R1032D.FR1.session(1).badsegment = [6692,7487;13550,14138;16620,17202;22614
 % Mostly depth electrodes. Very frequency epileptic events that are present
 % in temporal grids.
 
-% z-thresh 0.9
-info.R1128E.FR1.session(1).bsfilt.peak = [60, 119.9, 172.1, 179.9, 239.8]; %, 299.7, 344.2, 359.7, 381.7, 382.3, 419.6, 459.5, 479.5, 482.7];
-info.R1128E.FR1.session(1).bsfilt.halfbandw = [0.7000 0.5000 0.5000 0.7000 0.5000]; % 1.2000 0.5000 0.5000 0.5000 0.5000 0.8000 0.5000 0.5000 0.5000];
+info.R1128E.FR1.session(1).bsfilt.peak      = [60, 119.9, 172.1, 179.9, 239.8]; % Session 1 (z-thresh 1)
+info.R1128E.FR1.session(1).bsfilt.halfbandw = [0.7, 0.5,  0.5,   0.7,   0.5]; % Session 1 (z-thresh 1)
 
 info.R1128E.FR1.session(1).badchan.broken = {'RTRIGD10', 'RPHCD9'}; % one is all line noise, the other large deviations
 info.R1128E.FR1.session(1).badchan.epileptic = {'RANTTS1x', 'RANTTS2x', 'RANTTS3x', 'RANTTS4x', ... % interictal events
     'RINFFS1x' ... % marked as bad by Kahana Lab
-    'RINFPS1x', 'RINFPS3x', 'RINFPS5x', 'RINFPS7x', 'RSUPPS1x', 'RSUPPS3x', 'RSUPPS5x', 'RSUPPS7x'}; % weird naming convention; slinky
+    'RINFPS1x', 'RINFPS3x', 'RINFPS5x', 'RINFPS7x', 'RSUPPS1x', 'RSUPPS3x', 'RSUPPS5x', 'RSUPPS7x'}; % weird naming convention; slinky; also occipital/parietal
 
 info.R1128E.FR1.session(1).badsegment = [99207,99478;135550,135784;213726,214090;220313,221010;240744,241075;252563,252825;262689,263399;264985,265663;277002,277164;490763,491336;571506,572235;583916,584840;646804,647352;676159,676623;766217,767189;828860,829244;830359,831105;872631,873655;1018759,1019307;1299921,1300619;1807973,1808643;1815413,1815930;1819433,1819765;1831655,1833078;1868574,1869154;1982802,1983754;2159589,2160001;2285284,2285854;2372943,2373480;2440251,2440784;2595946,2596451;2608393,2609014;2665639,2666566;2675616,2676290;2760076,2760818;2965178,2966194]; 
 
@@ -97,9 +97,45 @@ info.R1149N.FR1.session(1).badchan.broken = {'ALEX*', 'AST2', 'G1', 'LF2', 'LF3'
 
 %%%%%% R1034D %%%%% ***
 % Lots of spiky channels, particularly in Session 1. Lots of reference noise in Session 3, reref helps.
-info.R1034D.FR1.session(1).badchan.broken = {'LFG1', 'LFG16', 'LFG24', 'LFG32', 'LFG8', 'LIHG16', 'LIHG24', 'LIHG8', 'LOFG12', 'LOFG6', 'LOTD12', 'LTS8', 'RIHG16', 'RIHG8'};
-info.R1034D.FR1.session(2).badchan.broken = {'LFG1', 'LFG16', 'LFG24', 'LFG32', 'LFG8', 'LIHG16', 'LIHG24', 'LIHG8', 'LOFG12', 'LOFG6', 'LOTD12', 'LTS8', 'RIHG16', 'RIHG8'};
-info.R1034D.FR1.session(3).badchan.broken = {'LFG1', 'LFG16', 'LFG24', 'LFG32', 'LFG8', 'LIHG16', 'LIHG24', 'LIHG8', 'LOFG12', 'LOFG6', 'LOTD12', 'LTS8', 'RIHG16', 'RIHG8'};
+peaks = [60, 120, 180, 180.1, 240, 240.1, 172.3, 183.5, 200, 212];
+bw    = [0.6, 0.5, 0.5, 0.5,  0.6, 0.5,   0.5,   0.5,   0.5, 0.5];
+
+info.R1034D.FR1.session(1).bsfilt.peak = peaks;
+info.R1034D.FR1.session(1).bsfilt.halfbandw = bw;
+info.R1034D.FR1.session(2).bsfilt.peak = peaks;
+info.R1034D.FR1.session(2).bsfilt.halfbandw = bw;
+info.R1034D.FR1.session(3).bsfilt.peak = peaks;
+info.R1034D.FR1.session(3).bsfilt.halfbandw = bw;
+
+% Session 1 (z-thresh 1): [60, 120, 180.1, 183.5, 240]
+% Session 1 (z-thresh 1): [0.6, 0.5, 0.5,  0.5,   0.6]
+% Session 1 (manual):     [172.3, 212]
+% Session 1 (manual):     [0.5,   0.5]
+% Session 2 (z-thresh 1): [60, 120, 172.3, 180, 240.1]
+% Session 2 (z-thresh 1): [0.5, 0.5, 0.5,  0.5, 0.5]
+% Session 3 (z-thresh 1): [60, 120, 172.3, 180, 240]
+% Session 3 (z-thresh 1): [0.6, 0.5, 0.5,  0.5, 0.5]
+% Session 3 (manual):     [200]
+% Session 3 (manual):     [0.5]
+
+info.R1034D.FR1.session(1).badchan.broken = {'LFG1x', 'LFG16x', 'LFG24x', 'LFG32x', 'LFG8x', 'LIHG16x', 'LIHG24x', 'LIHG8x', 'LOFG12x', 'LOFG6x', 'LOTD12', 'LTS8x', 'RIHG16x', 'RIHG8x', ... % flat-line channels
+    'LOTD7'}; % large voltage fluctuations
+info.R1034D.FR1.session(2).badchan.broken = {'LFG1x', 'LFG16x', 'LFG24x', 'LFG32x', 'LFG8x', 'LIHG16x', 'LIHG24x', 'LIHG8x', 'LOFG12x', 'LOFG6x', 'LOTD12', 'LTS8x', 'RIHG16x', 'RIHG8x', ... % flat-line channels
+    'LOTD7'}; % large voltage fluctuations
+info.R1034D.FR1.session(3).badchan.broken = {'LFG1x', 'LFG16x', 'LFG24x', 'LFG32x', 'LFG8x', 'LIHG16x', 'LIHG24x', 'LIHG8x', 'LOFG12x', 'LOFG6x', 'LOTD12', 'LTS8x', 'RIHG16x', 'RIHG8x', ... % flat-line channels
+    'LOTD7'}; % large voltage fluctuations
+
+info.R1034D.FR1.session(1).badchan.epileptic = {'LIHG17x', ... % big fluctuations and small sharp oscillations
+    'LIHG18x', ... % small sharp oscillations
+    'LFG13x', 'LFG14x', 'LFG15x', 'LFG22x', 'LFG23x'}; % marked by Kahana
+info.R1034D.FR1.session(2).badchan.epileptic = {'LIHG17x', ... % big fluctuations and small sharp oscillations
+    'LIHG18x', ... % small sharp oscillations
+    'LFG13x', 'LFG14x', 'LFG15x', 'LFG22x', 'LFG23x'}; % marked by Kahana
+info.R1034D.FR1.session(3).badchan.epileptic = {'LIHG17x', ... % big fluctuations and small sharp oscillations
+    'LIHG18x', ... % small sharp oscillations
+    'LFG13x', 'LFG14x', 'LFG15x', 'LFG22x', 'LFG23x'}; % marked by Kahana
+
+info.R1034D.FR1.session(1).badsegment = [76801,77572;93764,94659;102208,102963;161824,162333;166173,166941;208310,208857;220358,221472;330990,331360;362431,363606;364801,365654;371201,371950;383154,384353;403812,404492;668336,669120;712323,712858;722060,723055;765115,766006;858349,858909;911304,912126;915704,916527;934152,935017;1417355,1418204;1562986,1563576;1626014,1626535;1762697,1763300;1994383,1995283;2144001,2144363;2265601,2268402;2272607,2273451;2280740,2281627;2324272,2325357;2446530,2447116;2558091,2559627;2572438,2573874;2608886,2609494;2634981,2636251;2641696,2643693;2680362,2680874;2682126,2682944;2694091,2695192];
 
 %%%%%% R1162N %%%%%
 % Very clean, only occassional reference noise across channels. WRONG. I
@@ -112,8 +148,31 @@ info.R1033D.FR1.session(1).badchan.broken = {'LFS8', 'LOTD12', 'LTS8', 'RATS8', 
 
 %%%%%% R1167M %%%%% ***
 % Lots of reference noise, reref helps. Some ambiguous spiky channels remain.
-info.R1167M.FR1.session(1).badchan.broken = {'LP7', 'LP8', 'LPT19', 'LPT20', 'LP5'};
-info.R1167M.FR1.session(2).badchan.broken = {'LP7', 'LP8', 'LPT19', 'LPT20', 'LP5'};
+
+peaks = [60, 100.3, 120, 180, 219.2, 220.2, 221.8, 239.9, 100, 219.8, 220.8, 221.3, 240, 58.7, 59.3, 61.3, 80, 95.3, 140, 160.1, 199.9];
+bw =    [0.5, 0.5,  0.5, 0.5, 0.5,   0.7,   0.5,   0.5,   0.6, 1,     0.5,   0.5,   0.5, 1,    1,    1,    1,  1,    1,   1,     1];
+info.R1167M.FR1.session(1).bsfilt.peak = peaks;
+info.R1167M.FR1.session(1).bsfilt.halfbandw = bw;
+
+info.R1167M.FR1.session(2).bsfilt.peak = peaks;
+info.R1167M.FR1.session(2).bsfilt.halfbandw = bw;
+
+% Session 1 (z-thresh 1.75): [60, 100.3, 120, 180, 219.2, 220.2, 221.8, 239.9]
+% Session 1 (z-thresh 1.75): [0.5, 0.5, 0.5, 0.5, 0.5, 0.7, 0.5, 0.5]
+% Session 2 (z-thresh 1.75): [60, 100, 120, 180, 219.8, 220.8, 221.3, 240]
+% Session 2 (z-thresh 1.75): [0.5, 0.6, 0.5, 0.5, 1, 0.5, 0.5, 0.5]
+% Session 2 (manual):        [58.7, 59.3, 61.3, 80, 95.3, 140, 160.1, 199.9]
+% Session 2 (manual):        [1, 1, 1, 1, 1, 1, 1, 1]
+
+info.R1167M.FR1.session(1).badchan.broken = {'LP7x', ... % sinusoidal noise
+    'LP8x'}; % spiky and large fluctuations
+info.R1167M.FR1.session(2).badchan.broken = {'LP7x', ... % sinusoidal noise
+    'LP8x'}; % spiky and large fluctuations
+
+info.R1167M.FR1.session(1).badchan.epileptic = {};
+
+%     'LPT19', 'LPT20', 'LP5'};
+% info.R1167M.FR1.session(2).badchan.broken = {'LP7', 'LP8', 'LPT19', 'LPT20', 'LP5'};
 
 %%%%%% R1175N %%%%%
 % Lots of reference noise, reref helps some, but sinusoidal channels
