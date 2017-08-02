@@ -1,62 +1,199 @@
 function info = kah_info
+warning off
+
 info = struct;
 
-% path to Kahana folder on shared VoytekLab server
+% Set path to Kahana folder on shared VoytekLab server.
 info.path.kah = '/Volumes/voyteklab/common/data2/kahana_ecog_RAMphase1/';
 
-% path to .csv file with demographic information
+% Set path to .csv file with demographic information.
 info.path.demfile = [info.path.kah 'Release_Metadata_20160930/RAM_subject_demographics.csv'];
 
-% current release of Kahana data
+% Set current release of Kahana data.
 info.release = 'r1';
 
-% path to subject data
-info.path.data = [info.path.kah 'session_data/experiment_data/protocols/' info.release '/subjects/'];
+% Set path to experiment data.
+info.path.exp = [info.path.kah 'session_data/experiment_data/protocols/' info.release '/subjects/'];
 
-% selected subjects for aging directional PAC + 1/f slope study
-% selected based on output of kah_parsemetadata.m
-% >= age 18, sampling rate >= 999 Hz, temporal & frontal grids, FR1 task, >
-% 20 correct trials, and relatively clean data
-info.subj = {'R1032D', 'R1128E', 'R1034D', 'R1167M', 'R1142N', 'R1059J', 'R1020J', 'R1045E'};
+% Set path to anatomical data.
+info.path.surf = [info.path.kah 'session_data/surfaces/'];
 
-% selected subjects' age, extracted from info.path.demfile   
-info.age = [19, 26, 29, 33, 43, 44, 48, 51];
+% Get all subject identifiers.
+info.subj = dir(info.path.exp);
+info.subj = {info.subj.name};
+info.subj(contains(info.subj, '.')) = [];
 
-% All subjects >= 500 Hz
+% Get info from demographic file.
+demfile = fopen(info.path.demfile);
+deminfo = textscan(demfile, '%s %s %f %s %s %s %s %s %s %s %s %s', 'delimiter', ',', 'headerlines', 1);
+fclose(demfile);
+
+% Get gender, ages, and handedness of all subjects.
+[info.gender, info.hand] = deal(cell(size(info.subj)));
+info.age = nan(size(info.subj));
+
+for isubj = 1:numel(info.subj)
+    info.gender(isubj) = deminfo{2}(strcmpi(info.subj{isubj}, deminfo{1}));
+    info.age(isubj) = deminfo{3}(strcmpi(info.subj{isubj}, deminfo{1}));
+    info.hand(isubj) = deminfo{12}(strcmpi(info.subj{isubj}, deminfo{1}));
+end
+
+% % OPTIONAL:
+% % Select subjects for aging directional PAC + 1/f slope study.
+% % >= age 18, sampling rate >= 999 Hz, temporal & frontal grids, FR1 task, > 20 correct trials, and relatively clean data
+% info.subj = {'R1032D', 'R1128E', 'R1034D', 'R1167M', 'R1142N', 'R1059J', 'R1020J', 'R1045E'};
+% 
+% [info.gender, info.hand] = deal(cell(size(info.subj)));
+% info.age = nan(size(info.subj));
+% 
+% for isubj = 1:numel(info.subj)
+%     info.gender(isubj) = deminfo{2}(strcmpi(info.subj{isubj}, deminfo{1}));
+%     info.age(isubj) = deminfo{3}(strcmpi(info.subj{isubj}, deminfo{1}));
+%     info.hand(isubj) = deminfo{12}(strcmpi(info.subj{isubj}, deminfo{1}));
+% end
+
+% % All subjects >= 500 Hz
 % info.subj = {'R1032D', 'R1006P', 'R1086M', 'R1177M', 'R1128E', 'R1156D', 'R1039M', 'R1149N', 'R1034D', 'R1112M', ...
 %     'R1162N', 'R1033D', 'R1167M', 'R1102P', 'R1121M', 'R1175N', 'R1060M', 'R1089P', 'R1154D', 'R1003P', ...
 %     'R1053M', 'R1066P', 'R1068J', 'R1127P', 'R1159P', 'R1080E', 'R1142N', 'R1059J', 'R1067P', 'R1018P', ...
 %     'R1135E', 'R1147P', 'R1001P', 'R1020J', 'R1002P', 'R1036M', 'R1045E'};
-% info.age = [19, 20, 20, 23, 26, 27, 28, 28, 29, 29, 30, 31, 33, 34, 34, 34, 36, 36, 36, 39, 39, 39, 39, 40, 42, 43, 43, 44, 45, 47, 47, 47, 48, 48, 49, 49, 51];
-   
-% For each subject, extract experiments and sessions and store header,
-% data, and event paths.
-for isubj = 1:numel(info.subj)
-    subjcurr = info.subj{isubj};
-    subjpath = [info.path.data subjcurr '/'];
 
-    info.(subjcurr).contactsfile = [subjpath 'localizations/0/montages/0/neuroradiology/current_processed/contacts.json'];
+% Load anatomical atlases.
+talatlas = ft_read_atlas('TTatlas+tlrc.HEAD');
+mniatlas = ft_read_atlas('ROI_MNI_V4.nii');
+
+% For each subject, extract anatomical, channel, and electrophysiological info.
+for isubj = 1:numel(info.subj)
     
+    % Get current subject identifier.
+    subjcurr = info.subj{isubj};
+    disp([num2str(isubj) ' ' subjcurr])
+
+    % Get path for left- and right-hemisphere pial surf files.
+    info.(subjcurr).lsurffile = [info.path.surf subjcurr '/surf/lh.pial'];
+    info.(subjcurr).rsurffile = [info.path.surf subjcurr '/surf/rh.pial'];
+    
+    % Get experiment-data path for current subject.
+    subjpathcurr = [info.path.exp subjcurr '/'];
+        
+    % Get path for contacts.json and get all contact information.
+    info.(subjcurr).contactsfile = [subjpathcurr 'localizations/0/montages/0/neuroradiology/current_processed/contacts.json'];
+    contacts = loadjson(info.(subjcurr).contactsfile);
+    contacts = contacts.(subjcurr).contacts;
+    
+    % Get labels for all channels.
+    info.(subjcurr).allchan.label = fieldnames(contacts);
+    
+    % For each channel...
+    for ichan = 1:length(info.(subjcurr).allchan.label)
+        chancurr = contacts.(info.(subjcurr).allchan.label{ichan});
+        
+        % ...get channel type (grid, strip, depth)...
+        info.(subjcurr).allchan.type{ichan} = chancurr.type;
+        
+        % and region labels and xyz coordinates per atlas.
+        atlases = {'avg', 'avg_0x2E_dural', 'ind', 'ind_0x2E_dural', 'mni', 'tal', 'vox'};
+        for iatlas = 1:length(atlases)
+             % Get current atlas info for the channel.
+            try
+                atlascurr = chancurr.atlases.(atlases{iatlas});
+            catch
+                continue % if atlas not included for this subject.
+            end
+            
+            % Extract region label for channel.
+            if isempty(atlascurr.region)
+                atlascurr.region = 'NA'; % if no region label is given in this atlas. For MNI and TAL, this will be filled in later.
+            end
+            info.(subjcurr).allchan.(atlases{iatlas}).region{ichan} = atlascurr.region;
+            
+            % Convert xyz coordinates to double, if necessary (due to NaNs in coordinates).
+            coords = {'x', 'y', 'z'};
+            for icoord = 1:length(coords)
+                if ischar(atlascurr.(coords{icoord}))
+                    atlascurr.(coords{icoord}) = str2double(atlascurr.(coords{icoord}));
+                end
+            end
+            
+            % Extract xyz coordinates.
+            info.(subjcurr).allchan.(atlases{iatlas}).xyz(ichan,:) = [atlascurr.x, atlascurr.y, atlascurr.z];
+        end
+        
+        % Get top anatomical label from MNI atlas.
+        try
+            mnilabel = lower(atlas_lookup(mniatlas, info.(subjcurr).allchan.mni.xyz(ichan,:), 'inputcoord', 'mni', 'queryrange', 3));
+            mnilabel = mnilabel{1};
+        catch
+            mnilabel = 'NA'; % if no label was found.
+        end
+        info.(subjcurr).allchan.mni.region{ichan} = mnilabel;
+        
+        % Get anatomical label from TAL atlas.
+        try
+            tallabel = lower(atlas_lookup(talatlas, info.(subjcurr).allchan.tal.xyz(ichan,:), 'inputcoord', 'tal', 'queryrange', 3));
+            tallabel = tallabel{1};
+        catch
+            tallabel = 'NA'; % if no label was found.
+        end
+        info.(subjcurr).allchan.tal.region{ichan} = tallabel;
+        
+        % Get anatomical annotations from Kahana group.
+        avglabel = lower(info.(subjcurr).allchan.avg.region{ichan});
+        
+        % Get labels corresponding to particular lobes.
+        regions = {mnilabel, tallabel, avglabel};
+        frontal = contains(regions, {'frontal', 'opercularis', 'triangularis', 'precentral', 'rectal', 'rectus', 'orbital'});
+        temporal = contains(regions, {'temporal', 'fusiform'});
+        nolabel = strcmpi('NA', regions);
+        
+        % Determine lobe location based on majority vote across three labels.
+        if sum(frontal) > (sum(~nolabel)/2)
+            info.(subjcurr).allchan.lobe{ichan} = 'F';
+        elseif sum(temporal) > (sum(~nolabel)/2)
+            info.(subjcurr).allchan.lobe{ichan} = 'T';
+        else
+            info.(subjcurr).allchan.lobe{ichan} = 'NA';
+        end
+    end
+    
+    % Get ROI channels (temporal and frontal).
+    info.(subjcurr).roichan.temporal = info.(subjcurr).allchan.label(strcmpi('T', info.(subjcurr).allchan.lobe));
+    info.(subjcurr).roichan.frontal = info.(subjcurr).allchan.label(strcmpi('F', info.(subjcurr).allchan.lobe));
+
     % Get experiments performed.
-    experiments = extractfield(dir([subjpath 'experiments/']), 'name');
+    experiments = extractfield(dir([subjpathcurr 'experiments/']), 'name');
     experiments(contains(experiments, '.')) = [];
     
+    % For each experiment...
     for iexp = 1:numel(experiments)
         expcurr = experiments{iexp};
         
-        % Get session numbers for each experiment.
-        sessions = extractfield(dir([subjpath 'experiments/' expcurr '/sessions/']), 'name');
+        % ...get subject experiment path, ...
+        exppathcurr = [subjpathcurr 'experiments/' expcurr '/sessions/'];
+        
+        % ...get session numbers, ...
+        sessions = extractfield(dir(exppathcurr), 'name');
         sessions(contains(sessions, '.')) = [];
         
+        % ...and get header file, data directory, and event file per session.
         for isess = 1:numel(sessions)
-            % Get header file, data directory, and event file for each
-            % session.
-            info.(subjcurr).(expcurr).session(isess).headerfile = [subjpath 'experiments/' expcurr '/sessions/' sessions{isess} '/behavioral/current_processed/index.json'];
-            info.(subjcurr).(expcurr).session(isess).datadir = [subjpath 'experiments/' expcurr '/sessions/' sessions{isess} '/ephys/current_processed/noreref/'];
-            info.(subjcurr).(expcurr).session(isess).eventfile = [subjpath 'experiments/' expcurr '/sessions/' sessions{isess} '/behavioral/current_processed/task_events.json'];
+            info.(subjcurr).(expcurr).session(isess).headerfile = [exppathcurr sessions{isess} '/behavioral/current_processed/index.json'];
+            info.(subjcurr).(expcurr).session(isess).datadir    = [exppathcurr sessions{isess} '/ephys/current_processed/noreref/'];
+            info.(subjcurr).(expcurr).session(isess).eventfile  = [exppathcurr sessions{isess} '/behavioral/current_processed/task_events.json'];
         end
     end
+    
+    % Get sampling rate from sources.json file.
+    sourcesfile = [exppathcurr sessions{isess} '/ephys/current_processed/sources.json'];
+    try
+        sources = loadjson(sourcesfile);
+    catch
+        info.(subjcurr).fs = 0; % if sources file not found.
+    end
+    sourcesfield = fieldnames(sources);
+    info.(subjcurr).fs = sources.(sourcesfield{1}).sample_rate;
 end
+
 % Remove sessions with problems.
 % info.R1156D.FR1.session(4) = [];
 
@@ -64,16 +201,6 @@ end
 % Mostly depth electrodes. Relatively frequent epileptic events, especially
 % in depths. Very buzzy (reference noise?), removed by average referencing.
 % Overall, not too bad.
-
-info.R1032D.fs = 1600;
-
-info.R1032D.allchan = {'LFS1'    'LFS2'    'LFS3'    'LFS4'    'LFS5'    'LFS6'    'LFS7'    'LFS8'    'LID1'    'LID10'    'LID11'    'LID12'    'LID2'    'LID3'    'LID4'    'LID5'    'LID6'    'LID7'    'LID8' ...
-    'LID9'    'LOFD1'    'LOFD10'    'LOFD11'    'LOFD12'    'LOFD2'    'LOFD3'    'LOFD4'    'LOFD5'    'LOFD6'    'LOFD7'    'LOFD8'    'LOFD9'    'LOTD1'    'LOTD10'    'LOTD11'    'LOTD12' ...
-    'LOTD2'    'LOTD3'    'LOTD4'    'LOTD5'    'LOTD6'    'LOTD7'    'LOTD8'    'LOTD9'    'LTS1'    'LTS2'    'LTS3'    'LTS4'    'LTS5'    'LTS6'    'LTS7'    'LTS8'    'RFS1'    'RFS2'    'RFS3' ...
-    'RFS4'    'RFS5'    'RFS6'    'RFS7'    'RFS8'    'RID1'    'RID10'    'RID11'    'RID12'    'RID2'    'RID3'    'RID4'    'RID5'    'RID6'    'RID7'    'RID8'    'RID9'    'ROFD1'    'ROFD10' ...
-    'ROFD11'    'ROFD12'    'ROFD2'    'ROFD3'    'ROFD4'    'ROFD5'    'ROFD6'    'ROFD7'    'ROFD8'    'ROFD9'    'ROTD1'    'ROTD10'    'ROTD11'    'ROTD12'    'ROTD2'    'ROTD3'    'ROTD4' ...
-    'ROTD5'    'ROTD6'    'ROTD7'    'ROTD8'    'ROTD9'    'RTS1'    'RTS2'    'RTS3'    'RTS4'    'RTS5'    'RTS6'    'RTS7'    'RTS8'};
-    
 info.R1032D.badchan.broken = {'LFS8', 'LID12', 'LOFD12', 'LOTD12', 'LTS8', 'RID12', 'ROFD12', 'ROTD12', 'RTS8', ... % flat-line channels
     };
 
@@ -83,7 +210,7 @@ info.R1032D.FR1.bsfilt.peak      = [60, 63.8, 120.1, 180, 240.1]; % FR1 Session 
 info.R1032D.FR1.bsfilt.halfbandw = [0.5, 0.5, 0.5,   0.5, 0.5];   % FR1 Session 1 (z-thresh 2)
 info.R1032D.FR1.bsfilt.edge      = 3.2237;
 
-info.R1032D.FR1.session(1).badsegment = [6692,7487;13550,14138;16620,17202;22614,23776;50403,51060;76023,79445;105550,106673;109098,109835;111814,112641;130627,131144;200285,200602;201414,201744;209220,209679;212756,215299;219092,219596;250892,251686;259595,260415;266788,267557;292356,292866;296059,297176;318349,319531;323672,324570;344181,344550;348124,349557;357439,357969;382427,383111;402069,403201;412014,412654;428382,429360;437782,438486;455788,456189;498574,499487;506866,508486;510852,511511;527982,528376;539098,539647;575342,575946;594846,595189;605395,605879;687833,688131;693808,694351;751459,751996;771666,772157;811162,811570;815672,816009;853027,853512;860537,861467;890382,891183;920767,921644;922143,923377;926197,927739;959846,960559;966434,966932;976575,976783;985539,986278;989088,989801;992511,993370;1010723,1011118;1024866,1025486;1032666,1033118;1034453,1035479;1050156,1051189;1063382,1063970;1090143,1090564;1104091,1105002;1115866,1116480;1135117,1135602;1138098,1138711;1154001,1154299;1181962,1182273;1197356,1199254;1206098,1206660;1219466,1220537;1227027,1228215;1234660,1235756;1259834,1260701;1283666,1284976;1297917,1298827;1300150,1301783;1312337,1313286;1324249,1325135;1327095,1327735;1366917,1367795;1384279,1385041;1395261,1396202;1399066,1399742;1429305,1430067;1458581,1459163;1511801,1512254;1611640,1611963;1629491,1629983;1634472,1636021;1672382,1672989;1686053,1686925;1687782,1688421;1699608,1700131;1708478,1710021;1787685,1788615;1837124,1837667;1838898,1839673;1847517,1848047;1864324,1865015;1923291,1924008;1936943,1938131;1943014,1943686;1984324,1985699;2004072,2005589;2006749,2008441;2016995,2017422;2028111,2028933;2071556,2072782;2075137,2075809;2102608,2102892;2118995,2119428;2140582,2143137;2154072,2154989;2218195,2218847;2272692,2273254;2296201,2296718;2303175,2303692;2317305,2317731;2328414,2329008;2379246,2380066;2472246,2472654;2474717,2475183;2476308,2477066;2491943,2492247;2535408,2535944;2575827,2576931;2580060,2580602;2667614,2667969;2673117,2673512;2683556,2683970;2767698,2767918;2769078,2770544;2772756,2773260;2785505,2785828;2787685,2788815;2878446,2878899;2909582,2910189;2923723,2924157;2971337,2971667;3007279,3007918;3023311,3023705;3029117,3029422;3031582,3032099;3037782,3038150;3049182,3049680;3086814,3087305;3088349,3088757;3189324,3190022;3240685,3241351;3250588,3251730;3282104,3282557;3343092,3343641;3351233,3351770;3369608,3370157;3386537,3387054;3398795,3399228;3419001,3419635;3454278,3454963;3478511,3478731;3484966,3485505;3493789,3494401;3507260,3507744;3564608,3566032;3585930,3587228;3596461,3597228;3607814,3608350;3625130,3625692;3649872,3650376;3679434,3680338;3707879,3708415;3734652,3735319;3817627,3818086;3828221,3828570;3843317,3844054;3852334,3852845;3914459,3914957;3919034,3919531;3930769,3931860;3956750,3957409;3958993,3959925;3973306,3974688;3987943,3988331;4037685,4038156;4062788,4063505;4081136,4081505;4082252,4082757;4084305,4084635;4116272,4117396;4165427,4166279;4174601,4175015;4236783,4237139;4256169,4256577;4264356,4264789;4270492,4270970]; 
+info.R1032D.FR1.session(1).badsegment = [6692,7487;13550,14138;16620,17202;22614,23776;50403,51060;76023,79445;105550,106673;109098,109835;111814,112641;130627,131144;200285,200602;201414,201744;209220,209679;212756,215299;219092,219596;250892,251686;259595,260415;266788,267557;292356,292866;296059,297176;318349,319531;323672,324570;344181,344550;348124,349557;357439,357969;382427,383111;402069,403201;412014,412654;428382,429360;437782,438486;455788,456189;498574,499487;506866,508486;510852,511511;527982,528376;539098,539647;575342,575946;594846,595189;605395,605879;687833,688131;693808,694351;751459,751996;771666,772157;811162,811570;815672,816009;853027,853512;860537,861467;890382,891183;920767,921644;922143,923377;926197,927739;959846,960559;966434,966932;976575,976783;985539,986278;989088,989801;992511,993370;1010723,1011118;1024866,1025486;1032666,1033118;1034453,1035479;1050156,1051189;1063382,1063970;1090143,1090564;1104091,1105002;1115866,1116480;1135117,1135602;1138098,1138711;1154001,1154299;1181962,1182273;1197356,1199254;1206098,1206660;1219466,1220537;1227027,1228215;1234660,1235756;1259834,1260701;1283666,1284976;1297917,1298827;1300150,1301783;1312337,1313286;1324249,1325135;1327095,1327735;1366917,1367795;1384279,1385041;1395261,1396202;1399066,1399742;1429305,1430067;1458581,1459163;1511801,1512254;1611640,1611963;1629491,1629983;1634472,1636021;1672382,1672989;1686053,1686925;1687782,1688421;1699608,1700131;1708478,1710021;1787685,1788615;1837124,1837667;1838898,1839673;1847517,1848047;1864324,1865015;1923291,1924008;1936943,1938131;1943014,1943686;1984324,1985699;2004072,2005589;2006749,2008441;2016995,2017422;2028111,2028933;2071556,2072782;2075137,2075809;2102608,2102892;2118995,2119428;2140582,2143137;2154072,2154989;2218195,2218847;2272692,2273254;2296201,2296718;2303175,2303692;2317305,2317731;2328414,2329008;2379246,2380066;2472246,2472654;2474717,2475183;2476308,2477066;2491943,2492247;2535408,2535944;2575827,2576931;2580060,2580602;2667614,2667969;2673117,2673512;2683556,2683970;2767698,2767918;2769078,2770544;2772756,2773260;2785505,2785828;2787685,2788815;2878446,2878899;2909582,2910189;2923723,2924157;2971337,2971667;3007279,3007918;3023311,3023705;3029117,3029422;3031582,3032099;3037782,3038150;3049182,3049680;3086814,3087305;3088349,3088757;3189324,3190022;3240685,3241351;3250588,3251730;3282104,3282557;3343092,3343641;3351233,3351770;3369608,3370157;3386537,3387054;3398795,3399228;3419001,3419635;3454278,3454963;3478511,3478731;3484966,3485505;3493789,3494401;3507260,3507744;3564608,3566032;3585930,3587228;3596461,3597228;3607814,3608350;3625130,3625692;3649872,3650376;3679434,3680338;3707879,3708415;3734652,3735319;3817627,3818086;3828221,3828570;3843317,3844054;3852334,3852845;3914459,3914957;3919034,3919531;3930769,3931860;3956750,3957409;3958993,3959925;3973306,3974688;3987943,3988331;4037685,4038156;4062788,4063505;4081136,4081505;4082252,4082757;4084305,4084635;4116272,4117396;4165427,4166279;4174601,4175015;4236783,4237139;4256169,4256577;4264356,4264789;4270492,4270970];
 
 % info.R1032D.FR1.session(1).chanoi = {'LFS*', 'RFS*', ... % frontal grids
 %     'LTS*', 'RTS*'}; % temporal grids
@@ -95,28 +222,16 @@ info.R1032D.FR1.session(1).badsegment = [6692,7487;13550,14138;16620,17202;22614
 %%%%%% R1128E %%%%% ***
 % Mostly depth electrodes. Very frequency epileptic events that are present
 % in temporal grids.
-info.R1128E.fs = 999;
-
-info.R1128E.allchan = {'LAHCD1'    'LAHCD2'    'LAHCD3'    'LAHCD4'    'LAHCD5'    'LAHCD6'    'LAHCD7'    'LAHCD8'    'LAHCD9'    'LAMYD1'    'LAMYD3'    'LAMYD5'    'LAMYD7'    'LAMYD9'    'RAHCD1'    'RAHCD10' ...
-    'RAHCD2'    'RAHCD3'    'RAHCD4'    'RAHCD5'    'RAHCD6'    'RAHCD7'    'RAHCD8'    'RAHCD9'    'RAMYD1'    'RAMYD3'    'RAMYD5'    'RAMYD7'    'RAMYD9'    'RANTTS1'    'RANTTS2'    'RANTTS3' ...
-    'RANTTS4'    'RANTTS5'    'RANTTS6'    'RANTTS7'    'RANTTS8'    'RENTD1'    'RENTD10'    'RENTD2'    'RENTD3'    'RENTD4'    'RENTD5'    'RENTD6'    'RENTD7'    'RENTD8'    'RENTD9'    'RFUSFD1' ...
-    'RFUSFD3'    'RFUSFD5'    'RFUSFD7'    'RFUSFD9'    'RINFFS1'    'RINFFS2'    'RINFFS3'    'RINFFS4'    'RINFPS1'    'RINFPS3'    'RINFPS5'    'RINFPS7'    'RINSD1'    'RINSD3'    'RINSD5' ...
-    'RINSD7'    'RINSD9'    'RITGD1'    'RITGD3'    'RITGD5'    'RITGD7'    'RITGD9'    'RLATTD1'    'RLATTD3'    'RLATTD5'    'RLATTD7'    'RLATTD9'    'RMTGD10'    'RMTGD2'    'RMTGD3'    'RMTGD4' ...
-    'RMTGD5'    'RMTGD6'    'RMTGD7'    'RMTGD8'    'RMTGD9'    'RPHCD1'    'RPHCD10'    'RPHCD2'    'RPHCD3'    'RPHCD4'    'RPHCD5'    'RPHCD6'    'RPHCD7'    'RPHCD8'    'RPHCD9'    'RSTGD1' ...
-    'RSTGD3'    'RSTGD5'    'RSTGD7'    'RSTGD9'    'RSUPFS1'    'RSUPFS2'    'RSUPFS3'    'RSUPFS4'    'RSUPPS1'    'RSUPPS3'    'RSUPPS5'    'RSUPPS7'    'RTEMPD1'    'RTEMPD10'    'RTEMPD2' ...
-    'RTEMPD3'    'RTEMPD4'    'RTEMPD5'    'RTEMPD6'    'RTEMPD7'    'RTEMPD8'    'RTEMPD9'    'RTRIGD1'    'RTRIGD10'    'RTRIGD2'    'RTRIGD3'    'RTRIGD4'    'RTRIGD5'    'RTRIGD6'    'RTRIGD7' ...
-    'RTRIGD8'    'RTRIGD9'};
- 
-info.R1128E.badchan.broken = {'RTRIGD10', 'RPHCD9'}; % one is all line noise, the other large deviations
+info.R1128E.badchan.broken = {'RTRIGD10', 'RPHCD9', ... % one is all line noise, the other large deviations
+    'RINFPS*', 'RSUPPS*'}; % odd-number naming scheme
 info.R1128E.badchan.epileptic = {'RANTTS1', 'RANTTS2', 'RANTTS3', 'RANTTS4', ... % interictal events
-    'RINFFS1' ... % marked as bad by Kahana Lab
-    'RINFPS1', 'RINFPS3', 'RINFPS5', 'RINFPS7', 'RSUPPS1', 'RSUPPS3', 'RSUPPS5', 'RSUPPS7'}; % weird naming convention; slinky; also occipital/parietal
+    'RINFFS1'}; % marked as bad by Kahana Lab
 
 info.R1128E.FR1.bsfilt.peak      = [60, 119.9, 172.1, 179.9, 239.8]; % FR1 Session 1 (z-thresh 1)
 info.R1128E.FR1.bsfilt.halfbandw = [0.7, 0.5,  0.5,   0.7,   0.5];   % FR1 Session 1 (z-thresh 1)
 info.R1128E.FR1.bsfilt.edge      = 3.0971;
 
-info.R1128E.FR1.session(1).badsegment = [99207,99478;135550,135784;213726,214090;220313,221010;240744,241075;252563,252825;262689,263399;264985,265663;277002,277164;490763,491336;571506,572235;583916,584840;646804,647352;676159,676623;766217,767189;828860,829244;830359,831105;872631,873655;1018759,1019307;1299921,1300619;1807973,1808643;1815413,1815930;1819433,1819765;1831655,1833078;1868574,1869154;1982802,1983754;2159589,2160001;2285284,2285854;2372943,2373480;2440251,2440784;2595946,2596451;2608393,2609014;2665639,2666566;2675616,2676290;2760076,2760818;2965178,2966194]; 
+info.R1128E.FR1.session(1).badsegment = [99207,99478;135550,135784;213726,214090;220313,221010;240744,241075;252563,252825;262689,263399;264985,265663;277002,277164;490763,491336;571506,572235;583916,584840;646804,647352;676159,676623;766217,767189;828860,829244;830359,831105;872631,873655;1018759,1019307;1299921,1300619;1807973,1808643;1815413,1815930;1819433,1819765;1831655,1833078;1868574,1869154;1982802,1983754;2159589,2160001;2285284,2285854;2372943,2373480;2440251,2440784;2595946,2596451;2608393,2609014;2665639,2666566;2675616,2676290;2760076,2760818;2965178,2966194];
 
 % info.R1128E.FR1.session(1).chanoi = {'RINFFS*', 'RSUPFS*', ... % frontal grids
 %     'RANTTS*'}; % temporal grids
@@ -124,33 +239,22 @@ info.R1128E.FR1.session(1).badsegment = [99207,99478;135550,135784;213726,214090
 %%%%%% R1156D %%%%%
 % Different grids are differentially affected by reference noise. Will need
 % to re-reference some channels separately from one another in order to
-% find signal. 
+% find signal.
 
 % Bad grids are LAF, LIHG, LPF, RFLG, RFLG, ROFS, RPS, RTS
 % OK grids that still need re-ref help are RFG, RIHG, RFPS; RFG1 should be
 % thrown out.
 
-%%%%%% R1149N %%%%% 
+%%%%%% R1149N %%%%%
 % Lots of reference noise and also antenna channels. Channel TT6 is buzzy. Occasional line noise
 % in channels even after filtering out line spectra. Lots of line spectra artifacts.
 
 % info.R1149N.FR1.session(1).bsfilt.peak =      [60, 120, 136, 180, 196.5, 211.6, 219.9, 226.7, 240, 241.9, 257, 272, 280, 287.2, 300, 332.5, 340, 347.7, 359.9, 360.9, 362.8, 377.9, 380, 393, 400, 408.1, 420, 423.3, 425.7, 438.4, 440, 460, 471, 480.1, 486.1];
 % info.R1149N.FR1.session(1).bsfilt.halfbandw = [0.5, 0.6, 0.5, 1.1, 0.5, 0.5, 0.5, 0.5, 1.6, 0.5, 0.5, 0.5, 0.5, 0.5, 1.8, 0.5, 0.6, 0.5, 1.6, 0.5, 0.5, 0.5, 0.5, 0.5, 0.6, 0.5, 1.4, 0.5, 0.5, 0.5, 0.5, 0.9, 0.5, 1.5, 0.5];
-% 
+%
 % info.R1149N.FR1.session(1).badchan.broken = {'ALEX*', 'AST2', 'G1', 'LF2', 'LF3'};
 
 %%%%%% R1034D %%%%% ***
-
-info.R1034D.fs = 1600;
-
-info.R1034D.allchan = {'LFG1'    'LFG10'    'LFG11'    'LFG12'    'LFG13'    'LFG14'    'LFG15'    'LFG16'    'LFG17'    'LFG18'    'LFG19'    'LFG2'    'LFG20'    'LFG21'    'LFG22'    'LFG23'    'LFG24'    'LFG25' ...
-    'LFG26'    'LFG27'    'LFG28'    'LFG29'    'LFG3'    'LFG30'    'LFG31'    'LFG32'    'LFG4'    'LFG5'    'LFG6'    'LFG7'    'LFG8'    'LFG9'    'LIHG1'    'LIHG10'    'LIHG11'    'LIHG12' ...
-    'LIHG13'    'LIHG14'    'LIHG15'    'LIHG16'    'LIHG17'    'LIHG18'    'LIHG19'    'LIHG2'    'LIHG20'    'LIHG21'    'LIHG22'    'LIHG23'    'LIHG24'    'LIHG3'    'LIHG4'    'LIHG5'    'LIHG6' ...
-    'LIHG7'    'LIHG8'    'LIHG9'    'LOFG1'    'LOFG10'    'LOFG11'    'LOFG12'    'LOFG2'    'LOFG3'    'LOFG4'    'LOFG5'    'LOFG6'    'LOFG7'    'LOFG8'    'LOFG9'    'LOTD1'    'LOTD10' ...
-    'LOTD11'    'LOTD12'    'LOTD2'    'LOTD3'    'LOTD4'    'LOTD5'    'LOTD6'    'LOTD7'    'LOTD8'    'LOTD9'    'LTS1'    'LTS2'    'LTS3'    'LTS4'    'LTS5'    'LTS6'    'LTS7'    'LTS8' ...
-    'RIHG1'    'RIHG10'    'RIHG11'    'RIHG12'    'RIHG13'    'RIHG14'    'RIHG15'    'RIHG16'    'RIHG17'    'RIHG18'    'RIHG19'    'RIHG2'    'RIHG20'    'RIHG21'    'RIHG22'    'RIHG23' ...
-    'RIHG24'    'RIHG3'    'RIHG4'    'RIHG5'    'RIHG6'    'RIHG7'    'RIHG8'    'RIHG9'}; 
-    
 % Lots of spiky channels, particularly in Session 1. Lots of reference noise in Session 3, reref helps.
 info.R1034D.badchan.broken = {'LFG1', 'LFG16', 'LFG24', 'LFG32', 'LFG8', 'LIHG16', 'LIHG24', 'LIHG8', 'LOFG12', 'LOFG6', 'LOTD12', 'LTS8', 'RIHG16', 'RIHG8', ... % flat-line channels
     'LOTD7'}; % large voltage fluctuations
@@ -192,14 +296,6 @@ info.R1034D.FR1.session(3).badsegment = [306485,307734;376117,377389;405640,4082
 
 %%%%%% R1167M %%%%% ***
 % Lots of reference noise, reref helps. Some ambiguous spiky channels remain.
-
-info.R1167M.fs = 1000;
-
-info.R1167M.allchan = {'LAD1'    'LAD2'    'LAD3'    'LAD4'    'LAI1'    'LAI2'    'LAI3'    'LAI4'    'LAT1'    'LAT10'    'LAT11'    'LAT12'    'LAT13'    'LAT14'    'LAT15'    'LAT16'    'LAT2'    'LAT3'    'LAT4' ...
-    'LAT5'    'LAT6'    'LAT7'    'LAT8'    'LAT9'    'LIF1'    'LIF2'    'LIF3'    'LIF4'    'LIF5'    'LIF6'    'LIF7'    'LIF8'    'LOF1'    'LOF2'    'LOF3'    'LOF4'    'LOF5'    'LOF6'    'LOF7' ...
-    'LOF8'    'LP1'    'LP2'    'LP3'    'LP4'    'LP5'    'LP6'    'LP7'    'LP8'    'LPD1'    'LPD2'    'LPD3'    'LPD4'    'LPT1'    'LPT10'    'LPT11'    'LPT12'    'LPT13'    'LPT14'    'LPT15' ...
-    'LPT16'    'LPT17'    'LPT18'    'LPT19'    'LPT2'    'LPT20'    'LPT21'    'LPT22'    'LPT23'    'LPT24'    'LPT3'    'LPT4'    'LPT5'    'LPT6'    'LPT7'    'LPT8'    'LPT9'};
-    
 info.R1167M.badchan.broken = {'LP7', ... % sinusoidal noise
     'LP8'}; % spiky and large fluctuations
 
@@ -207,7 +303,7 @@ info.R1167M.badchan.epileptic = {'LP1', 'LAT8', 'LAT11', 'LAT12', 'LAT13', 'LAT1
 
 info.R1167M.FR1.bsfilt.peak      = [60, 100.3, 120, 180, 219.2, 220.2, 221.8, 239.9, 100, 219.8, 220.8, 221.3, 240, 58.7, 59.3, 61.3, 80, 95.3, 140, 160.1, 199.9];
 info.R1167M.FR1.bsfilt.halfbandw = [0.5, 0.5,  0.5, 0.5, 0.5,   0.7,   0.5,   0.5,   0.6, 1,     0.5,   0.5,   0.5, 1,    1,    1,    1,  1,    1,   1,     1];
-info.R1167M.FR1.bsfilt.edge      = 3.1840; 
+info.R1167M.FR1.bsfilt.edge      = 3.1840;
 
 % Session 1 (z-thresh 1.75): [60, 100.3, 120, 180, 219.2, 220.2, 221.8, 239.9]
 % Session 1 (z-thresh 1.75): [0.5, 0.5, 0.5, 0.5, 0.5, 0.7, 0.5, 0.5]
@@ -218,7 +314,7 @@ info.R1167M.FR1.bsfilt.edge      = 3.1840;
 
 info.R1167M.FR1.session(1).badsegment = [37142,37344;89033,89429;163129,163469;259250,259900;407368,408122;410755,411081;530291,530437;554512,555489;774886,776472;827947,828821;883069,883578;907727,908612;921239,921429;1082561,1083227;1083681,1085205;1223384,1224281;1345533,1346147;1430762,1431691;1496380,1497558;1607234,1607799;1651123,1652462;1707308,1708777;1866573,1867287;1870621,1871562;1873577,1874239;2037952,2038078];
 info.R1167M.FR1.session(2).badsegment = [60001,60466;165698,166300;194025,194836;196835,197284;262307,263038;393231,394324;409884,410917;434073,435727;463097,464000;497222,498260;508763,511304;535722,536436;543769,544591;777198,778018;1038105,1038546;1139014,1140845;1164066,1164917;1215904,1217661;1303928,1304374;1348001,1348978;1399379,1400925;1447166,1447384;1654424,1654977;1704279,1706082;1821823,1822985];
-% 
+%
 % info.R1167M.FR1.session(1).chanoi = {'LIF*', 'LOF*', ... % frontal grids
 %     'LAT*', 'LPT*'}; % temporal grids
 
@@ -244,7 +340,7 @@ info.R1167M.FR1.session(2).badsegment = [60001,60466;165698,166300;194025,194836
 %%%%%% R1159P %%%%%
 % REALLY REALLY SHITTY AND I CAN'T EVEN RIGHT NOW
 
-%%%%%% R1080E %%%%% 
+%%%%%% R1080E %%%%%
 % Lots of noise (spikes) across channels, reref helps. 'L5D10', 'R10D7',
 % and 'RSFS4' go wonky in the second session only.
 % info.R1080E.FR1.session(2).badchan.broken = {'L9D7', 'R10D1', 'R12D7', 'RLFS7', 'L5D10', 'R10D7', 'RSFS4'};
@@ -252,21 +348,13 @@ info.R1167M.FR1.session(2).badsegment = [60001,60466;165698,166300;194025,194836
 
 %%%%%% R1142N %%%%% ***
 % Looks very, very clean.
-info.R1142N.fs = 1000;
-
-info.R1142N.allchan = {'AALF1'    'AALF2'    'AALF3'    'AALF4'    'AALF5'    'AALF6'    'AALF7'    'AALF8'    'AD1'    'AD2'    'AD3'    'AD4'    'ALF1'    'ALF2'    'ALF3'    'ALF4'    'ALF5'    'ALF6'    'ALF7' ...
-    'ALF8'    'ALT1'    'ALT2'    'ALT3'    'ALT4'    'ALT6'    'AST1'    'AST2'    'AST3'    'AST4'    'LAIH1'    'LAIH2'    'LAIH3'    'LAIH4'    'LMIH1'    'LMIH2'    'LMIH3'    'LMIH4'    'LMIH5' ...
-    'LMIH6'    'LPIH1'    'LPIH2'    'LPIH3'    'LPIH4'    'LPPI1'    'LPPI2'    'LPPI3'    'LPPI4'    'LPPI5'    'LPPI6'    'MLF1'    'MLF2'    'MLF3'    'MLF4'    'MLF5'    'MLF6'    'PD1'    'PD2' ...
-    'PD3'    'PD4'    'PLF1'    'PLF2'    'PLF3'    'PLF4'    'PLF5'    'PLF6'    'PLT1'    'PLT2'    'PLT3'    'PLT4'    'PLT5'    'PLT6'    'PST1'    'PST2'    'PST3'    'PST4'    'RAIH1'    'RAIH2' ...
-    'RAIH3'    'RAIH4'    'RMIH1'    'RMIH2'    'RMIH3'    'RMIH4'    'RMIH5'    'RMIH6'    'RPIH1'    'RPIH2'    'RPIH3'    'RPIH4'    'RPPI1'    'RPPI2'    'RPPI3'    'RPPI4'    'RPPI5'    'RPPI6'};
-    
 info.R1142N.badchan.broken = {'ALT6'}; % flat line
 
 info.R1142N.badchan.epileptic = {'PD1', 'PD2', 'PD3', 'AD1', 'AD2', 'AALF1', 'AALF2', 'MLF2', ... % Kahana
     'AST1', 'AST2', 'PST1', 'PST2'}; % buzzy channels
 
 info.R1142N.FR1.bsfilt.peak      = [60, 120, 180, 240];
-info.R1142N.FR1.bsfilt.halfbandw = [0.5, 0.5, 0.5, 0.5]; 
+info.R1142N.FR1.bsfilt.halfbandw = [0.5, 0.5, 0.5, 0.5];
 info.R1142N.FR1.bsfilt.edge      = 3.1840;
 
 % Session 1 (z-thresh 5): [60, 180]
@@ -280,21 +368,7 @@ info.R1142N.FR1.session(1).badsegment = [1,1915;7459,7503;15373,15544;20396,2106
 %     'ALT*', 'AST*', 'PLT*', 'PST*'}; % temporal grids
 
 %%%%%% R1059J %%%%% ***
-% Relatively clean, though many channels occasionally break. 
-
-info.R1059J.fs = 1000;
-
-info.R1059J.allchan = {'LAT1'    'LAT2'    'LAT3'    'LAT4'    'LAT5'    'LAT6'    'LAT7'    'LAT8'    'LDA1'    'LDA2'    'LDA3'    'LDA4'    'LDA5'    'LDA6'    'LDA7'    'LDA8'    'LDB1'    'LDB2'    'LDB3'    'LDB4' ...
-    'LDB5'    'LDB6'    'LDB7'    'LDB8'    'LDC1'    'LDC2'    'LDC3'    'LDC4'    'LDC5'    'LDC6'    'LDC7'    'LDC8'    'LFA1'    'LFA2'    'LFA3'    'LFA4'    'LFA5'    'LFA6'    'LFA7'    'LFA8' ...
-    'LFB1'    'LFB2'    'LFB3'    'LFB4'    'LFB5'    'LFB6'    'LFB7'    'LFB8'    'LFC1'    'LFC2'    'LFC3'    'LFC4'    'LFC5'    'LFC6'    'LFC7'    'LFC8'    'LFD1'    'LFD2'    'LFD3'    'LFD4' ...
-    'LFD5'    'LFD6'    'LFD7'    'LFD8'    'LIHA1'    'LIHA2'    'LIHA3'    'LIHA4'    'LIHB1'    'LIHB2'    'LIHB3'    'LIHB4'    'LPT1'    'LPT2'    'LPT3'    'LPT4'    'LPT5'    'LPT6'    'LPT7' ...
-    'LPT8'    'LSTA1'    'LSTA2'    'LSTA3'    'LSTA4'    'LSTA5'    'LSTA6'    'LSTA7'    'LSTA8'    'LSTB1'    'LSTB2'    'LSTB3'    'LSTB4'    'LSTB5'    'LSTB6'    'LSTB7'    'LSTB8'    'RAT1' ...
-    'RAT2'    'RAT3'    'RAT5'    'RAT6'    'RAT7'    'RAT8'    'RDA1'    'RDA2'    'RDA4'    'RDA5'    'RDA7'    'RDA8'    'RDB1'    'RDB2'    'RDB4'    'RDB5'    'RDB7'    'RDB8'    'RDC1'    'RDC2' ...
-    'RDC4'    'RDC5'    'RDC7'    'RFA1'    'RFA2'    'RFA3'    'RFA5'    'RFA6'    'RFA7'    'RFA8'    'RFB1'    'RFB2'    'RFB3'    'RFB5'    'RFB6'    'RFB7'    'RFB8'    'RFC1'    'RFC2'    'RFC3' ...
-    'RFC5'    'RFC6'    'RFC7'    'RFC8'    'RFD1'    'RFD2'    'RFD3'    'RFD5'    'RFD6'    'RFD7'    'RFD8'    'RIHA1'    'RIHA2'    'RIHA3'    'RIHA4'    'RIHB1'    'RIHB2'    'RIHB3'    'RIHB4' ...
-    'RPT1'    'RPT2'    'RPT3'    'RPT5'    'RPT6'    'RPT7'    'RPT8'    'RSTA1'    'RSTA2'    'RSTA3'    'RSTA5'    'RSTA6'    'RSTA7'    'RSTA8'    'RSTB1'    'RSTB2'    'RSTB3'    'RSTB5' ...
-    'RSTB6'    'RSTB7'    'RSTB8'};
-    
+% Relatively clean, though many channels occasionally break.
 info.R1059J.badchan.broken = {'LDC*', 'RDC7', 'LFC1', 'LIHA1', 'RAT1', 'RAT8', 'RIHA1', 'RIHB1', 'LFB3'};
 info.R1059J.badchan.epileptic = {'LSTA8', ... % spiky
     'LAT1', 'LAT2', 'LAT3', 'LAT4'}; % Kahana
@@ -324,16 +398,6 @@ info.R1059J.FR1.session(2).badsegment = [1,1744;3270,3324;6013,6135;27597,27622;
 
 %%%%%% R1020J %%%%% ***
 % Relatively clean, some reference noise (and different across grids).
-
-info.R1020J.fs = 1000;
-
-info.R1020J.allchan = {'RAH1'    'RAH2'    'RAH3'    'RAH4'    'RAH5'    'RAH6'    'RAH7'    'RAH8'    'RAT1'    'RAT2'    'RAT3'    'RAT4'    'RAT5'    'RAT6'    'RAT7'    'RAT8'    'RFA1'    'RFA2'    'RFA3'    'RFA4' ...
-    'RFA5'    'RFA6'    'RFA7'    'RFA8'    'RFB1'    'RFB2'    'RFB3'    'RFB4'    'RFB5'    'RFB6'    'RFB7'    'RFB8'    'RFC1'    'RFC2'    'RFC3'    'RFC4'    'RFC5'    'RFC6'    'RFC7'    'RFC8' ...
-    'RFD1'    'RFD2'    'RFD3'    'RFD4'    'RFD5'    'RFD6'    'RFD7'    'RFD8'    'RFE1'    'RFE2'    'RFE3'    'RFE4'    'RFE5'    'RFE6'    'RFE7'    'RFE8'    'RPH1'    'RPH2'    'RPH3'    'RPH4' ...
-    'RPH5'    'RPH6'    'RPH7'    'RPH8'    'RPTA1'    'RPTA2'    'RPTA3'    'RPTA4'    'RPTA5'    'RPTA6'    'RPTA7'    'RPTA8'    'RPTB1'    'RPTB2'    'RPTB3'    'RPTB4'    'RPTB5'    'RPTB6' ...
-    'RPTB7'    'RPTB8'    'RSTA1'    'RSTA2'    'RSTA3'    'RSTA4'    'RSTB1'    'RSTB2'    'RSTB3'    'RSTB4'    'RSTB5'    'RSTB6'    'RSTB7'    'RSTB8'    'RSTC1'    'RSTC2'    'RSTC3'    'RSTC4' ...
-    'RSTC5'    'RSTC6'    'RSTC7'    'RSTC8'};
-    
 info.R1020J.badchan.broken = {'RSTB5', 'RAH7', 'RPH7', 'RSTB8', 'RFB8', 'RAH8', ... % my broken channels
     'RFB1', 'RFB2', 'RPTB1', 'RPTB2', 'RPTB3'}; % Kahana broken channels
 info.R1020J.badchan.epileptic = {'RAT6', 'RAT7', 'RAT8', 'RSTA2', 'RSTA3', 'RFA1', 'RFA2', 'RFA3', 'RFA7', ... % Kahana
@@ -347,19 +411,8 @@ info.R1020J.FR1.session(1).badsegment = [1,2146;20947,21937;46669,47299;85793,86
 
 %%%%%% R1045E %%%%% ***
 % Looks very clean.
-
-info.R1045E.fs = 999;
-
-info.R1045E.allchan = {'LAFS1'    'LAFS2'    'LAFS3'    'LAFS4'    'LAFS5'    'LAFS6'    'LAFS7'    'LAFS8'    'LAHD1'    'LAHD10'    'LAHD2'    'LAHD3'    'LAHD4'    'LAHD5'    'LAHD6'    'LAHD7'    'LAHD8'    'LAHD9' ...
-    'LAMYD1'    'LAMYD10'    'LAMYD2'    'LAMYD3'    'LAMYD4'    'LAMYD5'    'LAMYD6'    'LAMYD7'    'LAMYD8'    'LAMYD9'    'LATS1'    'LATS2'    'LATS3'    'LATS4'    'LATS5'    'LATS6'    'LATS7' ...
-    'LATS8'    'LIFS1'    'LIFS10'    'LIFS2'    'LIFS3'    'LIFS4'    'LIFS5'    'LIFS6'    'LIFS8'    'LIFS9'    'LMHD1'    'LMHD10'    'LMHD2'    'LMHD3'    'LMHD4'    'LMHD5'    'LMHD6'    'LMHD7' ...
-    'LMHD8'    'LMHD9'    'LPHD1'    'LPHD10'    'LPHD2'    'LPHD3'    'LPHD4'    'LPHD5'    'LPHD6'    'LPHD7'    'LPHD8'    'LPHD9'    'LPHGD1'    'LPHGD10'    'LPHGD2'    'LPHGD3'    'LPHGD4' ...
-    'LPHGD5'    'LPHGD6'    'LPHGD7'    'LPHGD8'    'LPHGD9'    'LPTS1'    'LPTS10'    'LPTS2'    'LPTS3'    'LPTS4'    'LPTS5'    'LPTS6'    'LPTS7'    'LPTS8'    'LPTS9'    'LSTGID1'    'LSTGID10' ...
-    'LSTGID2'    'LSTGID3'    'LSTGID4'    'LSTGID5'    'LSTGID6'    'LSTGID7'    'LSTGID8'    'LSTGID9'    'RAFS1'    'RAFS3'    'RAFS5'    'RAFS7'    'RAHD1'    'RAHD3'    'RAHD5'    'RAHD7' ...
-    'RAMYD1'    'RAMYD3'    'RAMYD5'    'RAMYD7'    'RATS1'    'RATS3'    'RATS5'    'RATS7'    'RPHD1'    'RPHD3'    'RPHD5'    'RPHD7'    'RPHGD1'    'RPHGD3'    'RPHGD5'    'RPHGD7'    'RPTS1' ...
-    'RPTS3'    'RPTS5'    'RPTS7'    'RSTGID1'    'RSTGID3'    'RSTGID5'    'RSTGID7'};
-
-info.R1045E.badchan.broken = {'RPHD1', 'RPHD7', 'RPTS7', 'LIFS10', 'LPHD9'}; % large fluctuations and sinusoidal noise
+info.R1045E.badchan.broken = {'RPHD1', 'RPHD7', 'RPTS7', 'LIFS10', 'LPHD9', ... % large fluctuations and sinusoidal noise
+    'R*'}; % odd-number naming convention
 
 info.R1045E.badchan.epileptic = {'LAHD2', 'LAHD3', 'LAHD4', 'LAHD5', ...
     'LMHD1', 'LMHD2', 'LMHD3', 'LMHD4', 'LPHD2', 'LPHD3', 'LPHGD1', 'LPHGD2', 'LPHGD3', ...
