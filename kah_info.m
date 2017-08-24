@@ -47,18 +47,11 @@ end
 % % Select subjects for aging directional PAC + 1/f slope study.
 % % >= age 18, sampling rate >= 999 Hz, temporal & frontal grids, FR1 task, > 20 correct trials, and relatively clean data
 % info.subj = {'R1032D', 'R1128E', 'R1034D', 'R1167M', 'R1142N', 'R1059J', 'R1020J', 'R1045E'};
-% 
-% [info.gender, info.hand] = deal(cell(size(info.subj)));
-% info.age = nan(size(info.subj));
-% 
-% for isubj = 1:numel(info.subj)
-%     info.gender(isubj) = deminfo{2}(strcmpi(info.subj{isubj}, deminfo{1}));
-%     info.age(isubj) = deminfo{3}(strcmpi(info.subj{isubj}, deminfo{1}));
-%     info.hand(isubj) = deminfo{12}(strcmpi(info.subj{isubj}, deminfo{1}));
-% end
 
+% Subjects with fs >= 999, FR1, at least 1 T/F
 info.subj = {'R1020J' 'R1032D' 'R1033D' 'R1034D' 'R1045E' 'R1059J' 'R1075J' 'R1080E' 'R1084T' 'R1100D' 'R1120E' 'R1128E' 'R1129D' 'R1135E' ...
     'R1142N' 'R1147P' 'R1149N' 'R1151E' 'R1154D' 'R1155D' 'R1156D' 'R1159P' 'R1162N' 'R1166D' 'R1167M' 'R1175N'};
+
 [info.gender, info.hand] = deal(cell(size(info.subj)));
 info.age = nan(size(info.subj));
 
@@ -67,12 +60,6 @@ for isubj = 1:numel(info.subj)
     info.age(isubj) = deminfo{3}(strcmpi(info.subj{isubj}, deminfo{1}));
     info.hand(isubj) = deminfo{12}(strcmpi(info.subj{isubj}, deminfo{1}));
 end
-
-% % All subjects >= 500 Hz
-% info.subj = {'R1032D', 'R1006P', 'R1086M', 'R1177M', 'R1128E', 'R1156D', 'R1039M', 'R1149N', 'R1034D', 'R1112M', ...
-%     'R1162N', 'R1033D', 'R1167M', 'R1102P', 'R1121M', 'R1175N', 'R1060M', 'R1089P', 'R1154D', 'R1003P', ...
-%     'R1053M', 'R1066P', 'R1068J', 'R1127P', 'R1159P', 'R1080E', 'R1142N', 'R1059J', 'R1067P', 'R1018P', ...
-%     'R1135E', 'R1147P', 'R1001P', 'R1020J', 'R1002P', 'R1036M', 'R1045E'};
 
 % Load anatomical atlases.
 talatlas = ft_read_atlas('TTatlas+tlrc.HEAD');
@@ -215,108 +202,124 @@ end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% > 80 total trials (maybe > 70 *clean* trials)
+% > 80 total trials (maybe > 50 *clean* trials)
 % > 15% accuracy per session
 % > 3 T/F channels
 % clean line spectra 80-150Hz
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %  Subject - Sess - Temp - Front - Corr./All - Acc.     - Temp - Front - Corr./All - Acc.     - BAD - Notes
-% 'R1020J' - 1    - 28T  - 33F   - 114/300   - 0.3800   - 18T  - 24F   - 101/278   - 0.3633   - :)  - Cleaned. 48. 
+% 'R1020J' - 1    - 29T  - 32F   - 114/300   - 0.3800   - 18T  - 24F   - 101/278   - 0.3633   - :)  - Cleaned. Great subject. 48. 
 
 % 'R1032D' - 1    - 14T  - 11F   - 95/300    - 0.3167   - 13T  - 11F   - 80/234    - 0.3419   - :)  - Cleaned. 19.
 
-% 'R1033D' - 1    - 19T  - 13F   - 23**/108  - 0.2130   - 10T  - 13F   - 18**/87   - 0.2069   - !!! - Too few correct trials.
+% 'R1033D' - 1    - 18T  - 14F   - 23**/108  - 0.2130   - 9T   - 13F   - 18**/87   - 0.2069   - !!! - Too few correct trials.
 
-% 'R1034D' - 3    - 11T  - 47F   - 48**/528  - 0.0909   - 9T   - 40F   - 41**/484  - 0.0847   - !!! - Too few correct trials.
+% 'R1034D' - 3    - 10T  - 55F   - 48**/528  - 0.0909   - 8T   - 43F   - 41**/484  - 0.0847   - !!! - Too few correct trials.
 
-% 'R1045E' - 1    - 15T  - 25F   - 98/300    - 0.3267   - 9T   - 21F   - 79/235    - 0.3362   - :)  - Cleaned. 51. ***
+% 'R1045E' - 1    - 17T  - 27F   - 98/300    - 0.3267   - 6T   - 21F   - 79/235    - 0.3362   - :)  - Cleaned. 51. *** Consider re-cleaning.
 
-% 'R1059J' - 2    - 50T  - 58F   - 36**/444  - 0.0811   - 45T  - 54F   - 31**/335  - 0.0925   - !!! - Too few correct trials.
+% 'R1059J' - 2    - 49T  - 59F   - 36**/444  - 0.0811   - 45T  - 55F   - 31**/335  - 0.0925   - !!! - Too few correct trials.
 
-% 'R1075J' - 2    - 7T   - 83F   - 150/600   - 0.2500   - 7T   - 35F   -                      - :)  - Good pending clean. ***
-% 'R1075J' - 1/2  - 7T   - 83F   - 102/300   - 0.3400   - 7T   - 35F   -                      - :)  - 
-% 'R1075J' - 2/2  - 7T   - 83F   - 48/300    - 0.1600   - 7T   - 35F   -                      - :)  - 
+% 'R1075J' - 2    - 7T   - 83F   - 150/600   - 0.2500   - 7T   - 31F   -                      - :)  - Good pending clean. ***
+% 'R1075J' - 1/2  - 7T   - 83F   - 102/300   - 0.3400   - 7T   - 31F   -                      - :)  - 
+% 'R1075J' - 2/2  - 7T   - 83F   - 48/300    - 0.1600   - 7T   - 31F   -                      - :)  - 
 
 % 'R1080E' - 2    - 6T   - 10F   - 107/384   - 0.2786   - 6T   - 6F    -                      - :)  - Good pending clean. ***
 % 'R1080E' - 1/2  - 6T   - 10F   - 47/180    - 0.2611   - 6T   - 6F    -                      - :)  - 
 % 'R1080E' - 2/2  - 6T   - 10F   - 60/204    - 0.2941   - 6T   - 6F    -                      - :)  - 
 
-% 'R1084T' - 1    - 4T   - 40F   - 53**/300  - 0.1767   - 4T   - 38F   -                      - !!! - Too few correct trials.
+% 'R1084T' - 1    - 2T** - 42F   - 53**/300  - 0.1767   - 2T** - 39F   -                      - !!! - Too few correct trials and only 2T.
 
-% 'R1100D' - 3    - 28T  - 36F   - 11**/372  - 0.0296   -                                     - !!! - Too few correct trials.
+% 'R1100D' - 3    - 26T  - 39F   - 11**/372  - 0.0296   -                                     - !!! - Too few correct trials.
 
-% 'R1120E' - 2    - 12T  - 1F**  - 207/600   - 0.3450   -                                     - :)  - Good pending clean. Not the cleanest.
-% 'R1120E' - 1/2  - 12T  - 1F**  - 97/300    - 0.3233   -                                     - :)  - 
-% 'R1120E' - 2/2  - 12T  - 1F**  - 110/300   - 0.3667   -                                     - :)  - 
+% 'R1120E' - 2    - 14T  - 4F    - 207/600   - 0.3450   - 11T  - 4F    -                      - :)  - Good pending clean. Not the cleanest.
+% 'R1120E' - 1/2  - 14T  - 4F    - 97/300    - 0.3233   - 11T  - 4F    -                      - :)  - 
+% 'R1120E' - 2/2  - 14T  - 4F    - 110/300   - 0.3667   - 11T  - 4F    -                      - :)  - 
 
 % 'R1128E' - 1    - 8T   - 10F   - 141/300   - 0.4700   - 2T** - 9F    - 130/277   - 0.4693   - !!! - Only 2T after clean.
 
-% 'R1129D' - 2    - 2T** - 46F   - 40**/228  - 0.1754   -                                     - !!! - Only 2T before clean, too few correct.
+% 'R1129D' - 2    - 0T** - 52F   - 40**/228  - 0.1754   -                                     - !!! - No T before clean, too few correct.
 
-% 'R1135E' - 4    - 7T   - 13F   - 107/1200  - 0.0892** -                                     - !!! - Performance.
-% 'R1135E' - 1/4  - 7T   - 13F   - 26/300    - 0.0867** -                                     - !!! - 
-% 'R1135E' - 2/4  - 7T   - 13F   - 43/300    - 0.1433** -                                     - !!! - 
-% 'R1135E' - 3/4  - 7T   - 13F   - 26/300    - 0.0867** -                                     - !!! - 
-% 'R1135E' - 4/4  - 7T   - 13F   - 12/300    - 0.0400** -                                     - !!! -
+% 'R1135E' - 4    - 6T   - 14F   - 107/1200  - 0.0892** -                                     - !!! - Performance.
+% 'R1135E' - 1/4  - 6T   - 14F   - 26/300    - 0.0867** -                                     - !!! - 
+% 'R1135E' - 2/4  - 6T   - 14F   - 43/300    - 0.1433** -                                     - !!! - 
+% 'R1135E' - 3/4  - 6T   - 14F   - 26/300    - 0.0867** -                                     - !!! - 
+% 'R1135E' - 4/4  - 6T   - 14F   - 12/300    - 0.0400** -                                     - !!! -
 
-% 'R1142N' - 1    - 17T  - 57F   - 48**/300  - 0.1600   - 12T  - 54F   - 36**/212  - 0.1698   - !!! - Too few correct.
+% 'R1142N' - 1    - 18T  - 59F   - 48**/300  - 0.1600   - 13T  - 56F   - 36**/212  - 0.1698   - !!! - Too few correct.
 
-% 'R1147P' - 3    - 43T  - 32F   - 101/559   - 0.1807   -                                     - :)  - Doable. ***
-% 'R1147P' - 1/3  - 43T  - 32F   - 73/283    - 0.2580   -                                     - :)  - 
-% 'R1147P' - 2/3  - 43T  - 32F   - 11/96     - 0.1146   -                                     - :)  - 
-% 'R1147P' - 3/3  - 43T  - 32F   - 17/180    - 0.0944   -                                     - ??? - Not yet looked at. 
+% 'R1147P' - 3    - 40T  - 32F   - 101/559   - 0.1807   - 7T   - 14F   -                      - :)  - Doable, but maybe too many lines.
+% 'R1147P' - 1/3  - 40T  - 32F   - 73/283    - 0.2580   - 7T   - 14F   -                      - :)  - Relatively unclean.
+% 'R1147P' - 2/3  - 40T  - 32F   - 11/96     - 0.1146   - 7T   - 14F   -                      - :)  - 
+% 'R1147P' - 3/3  - 40T  - 32F   - 17/180    - 0.0944   - 7T   - 14F   -                      - :)  -
 
-% 'R1149N' - 1    - 38T  - 16F   - 64**/300  - 0.2133   - 22T  - 4F                           - !!! - Too few correct.
+% 'R1149N' - 1    - 39T  - 16F   - 64**/300  - 0.2133   - 23T  - 4F                           - ??? - Too few correct.
 
-% 'R1151E' - 3    - 8T   - 3F    - 208/756   - 0.2751   - 8T   - 3F    -                      - :)  - Good pending cleaning. ***
-% 'R1151E' - 1/3  - 8T   - 3F    - 77/300    - 0.2567   - 8T   - 3F    -                      - :)  - 
-% 'R1151E' - 2/3  - 8T   - 3F    - 83/300    - 0.2767   - 8T   - 3F    -                      - :)  - 
-% 'R1151E' - 3/3  - 8T   - 3F    - 48/156    - 0.3077   - 8T   - 3F    -                      - :)  - ***
+% 'R1151E' - 3    - 7T   - 5F    - 208/756   - 0.2751   - 8T   - 3F    -                      - :)  - Good pending cleaning. ***
+% 'R1151E' - 1/3  - 7T   - 5F    - 77/300    - 0.2567   - 8T   - 3F    -                      - :)  - 
+% 'R1151E' - 2/3  - 7T   - 5F    - 83/300    - 0.2767   - 8T   - 3F    -                      - :)  - 
+% 'R1151E' - 3/3  - 7T   - 5F    - 48/156    - 0.3077   - 8T   - 3F    -                      - :)  - ***
 
-% 'R1154D' - 3    - 39T  - 20F   - 271/900   - 0.3011   - 28T  - 20F                          - :)  - ***
-% 'R1154D' - 1/3  - 39T  - 20F   - 63/300    - 0.2100   - 28T  - 20F                          - :)  - 
-% 'R1154D' - 2/3  - 39T  - 20F   - 108/300   - 0.3600   - 28T  - 20F                          - :)  - 
-% 'R1154D' - 3/3  - 39T  - 20F   - 100/300   - 0.3333   - 28T  - 20F                          - :)  - 
+% 'R1154D' - 3    - 39T  - 20F   - 271/900   - 0.3011   - 11T  - 20F                          - :)  - ***
+% 'R1154D' - 1/3  - 39T  - 20F   - 63/300    - 0.2100   - 11T  - 20F                          - :)  - 
+% 'R1154D' - 2/3  - 39T  - 20F   - 108/300   - 0.3600   - 11T  - 20F                          - :)  - ***
+% 'R1154D' - 3/3  - 39T  - 20F   - 100/300   - 0.3333   - 11T  - 20F                          - :)  - ***
 
-% 'R1155D' - 1    - 1T** - 59F   - 33**/120  - 0.2750   -                                     - !!! - Too few correct.
+% 'R1155D' - 1    - 1T** - 59F   - 33**/120  - 0.2750   -                                     - !!! - Too few correct, only 1T.
 
-% 'R1156D' - 3    - 7T   - 95F   - 215/900   - 0.2389   - 7T   - 95F                          - !!! - Bad noise in all temporal channels.
-% 'R1156D' - 1/3  - 7T   - 95F   - 63/300    - 0.2100   - 7T   - 95F                          - !!! - 
-% 'R1156D' - 2/3  - 7T   - 95F   - 74/300    - 0.2467   - 7T   - 95F                          - !!! - 
-% 'R1156D' - 3/3  - 7T   - 95F   - 78/300    - 0.2600   - 7T   - 95F                          - !!! - 
+% 'R1156D' - 3    - 7T   - 98F   - 215/900   - 0.2389   - 7T   - 95F                          - !!! - Bad noise in all temporal channels.
+% 'R1156D' - 1/3  - 7T   - 98F   - 63/300    - 0.2100   - 7T   - 95F                          - !!! - 
+% 'R1156D' - 2/3  - 7T   - 98F   - 74/300    - 0.2467   - 7T   - 95F                          - !!! - 
+% 'R1156D' - 3/3  - 7T   - 98F   - 78/300    - 0.2600   - 7T   - 95F                          - !!! - 
 
-% 'R1159P' - 1    - 45T  - 45F   - 40**/168  - 0.2381   - 37T  - 44F                          - !!! - Too few correct.
+% 'R1159P' - 1    - 42T  - 47F   - 40**/168  - 0.2381   - 36T  - 45F                          - !!! - Too few correct.
 
-% 'R1162N' - 1    - 25T  - 11F   - 77/300    - 0.2567   - 24T  - 11F                          - :)  - Good pending clean.
+% 'R1162N' - 1    - 25T  - 11F   - 77**/300  - 0.2567   - 14T  - 11F                          - :)  - Good pending clean.
 
-% 'R1166D' - 3    - 4T   - 39F   - 129/900   - 0.1433   - 4T   - 38F                          - :)   - ***
-% 'R1166D' - 1/3  - 4T   - 39F   - 30/300    - 0.100    - 4T   - 38F                          - 
-% 'R1166D' - 2/3  - 4T   - 39F   - 49/300    - 0.1633   - 4T   - 38F                          - 
-% 'R1166D' - 3/3  - 4T   - 39F   - 50/300    - 0.1667   - 4T   - 38F                          - 
+% 'R1166D' - 3    - 5T   - 38F   - 129/900   - 0.1433   - 5T   - 20F                          - :)   - ***
+% 'R1166D' - 1/3  - 5T   - 38F   - 30/300    - 0.100    - 5T   - 20F                          - 
+% 'R1166D' - 2/3  - 5T   - 38F   - 49/300    - 0.1633   - 5T   - 20F                          - 
+% 'R1166D' - 3/3  - 5T   - 38F   - 50/300    - 0.1667   - 5T   - 20F                          - 
 
-% 'R1167M' - 2    - 37T  - 21F   - 166/372   - 0.4462   - 32T  - 19F   - 127/281   - 0.452    - :)  - Cleaned. 33. Flat slope. 
-% 'R1167M' - 1/2  - 37T  - 21F   - 80/192    - 0.4167   - 32T  - 19F                          - :)  -  
-% 'R1167M' - 2/2  - 37T  - 21F   - 86/180    - 0.4778   - 32T  - 19F                          - :)  -  
+% 'R1167M' - 2    - 39T  - 20F   - 166/372   - 0.4462   - 33T  - 18F   - 127/281   - 0.452    - :)  - Cleaned. 33. Flat slope. 
+% 'R1167M' - 1/2  - 39T  - 20F   - 80/192    - 0.4167   - 33T  - 18F                          - :)  -  
+% 'R1167M' - 2/2  - 39T  - 20F   - 86/180    - 0.4778   - 33T  - 18F                          - :)  -  
 
-% 'R1175N' - 1    - 33T  - 30F   - 68**/300  - 0.2267   - 29T  - 30F                          - !!! - Too few correct.
+% 'R1175N' - 1    - 34T  - 30F   - 68**/300  - 0.2267   - 30T  - 30F                          - ??? - Too few correct.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%% R1020J %%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Notes:
-% Relatively clean, some line noise (and different across grids).
+% FINISHED FINISHED
+
+% 'R1020J' - 1    - 29T  - 32F   - 114/300   - 0.3800   - 18T  - 24F   - 101/278   - 0.3633   - :)  - Cleaned. 48. 
+
+% Some broken channels, big fluctuations and flat lines. 
+% Some channels have extra line noise, but notches are effective.
+% Notches are narrow, only at harmonics or above 150Hz. Baseline flat and clean.
+% Remaining channels are relatively free of interictal events.
+% Some buzz in remaining channels, somewhat slinky, but relatively low amplitude.
+% Lots of surface channels. 
+% Other than periods of extended slinkiness, nothing that could be easily taken out. 
+% Great accuracy, high number of trials.
+% No notes from researchers.
 
 % Channel Info:
-info.R1020J.badchan.broken = {'RSTB5', 'RAH7', 'RPH7', 'RSTB8', 'RFB8', 'RAH8', 'RFB4', ... % my broken channels + one of Roemer's
+info.R1020J.badchan.broken = {'RSTB5', 'RAH7', 'RPH7', 'RSTB8', 'RFB8', 'RAH8', ... % my broken channels, fluctuations and floor/ceiling
+    'RFB4', ... % one of Roemer's bad chans
     'RFB1', 'RFB2', 'RPTB1', 'RPTB2', 'RPTB3'}; % Kahana broken channels
 
 info.R1020J.badchan.epileptic = {'RAT6', 'RAT7', 'RAT8', 'RSTA2', 'RSTA3', 'RFA1', 'RFA2', 'RFA3', 'RFA7', ... % Kahana
     'RAT4', 'RAT5', 'RAT*'}; % big deflections + spikes (removing whole RAT grid after talking to Roemer)
 
 % Line Spectra Info:
-% Session 1/1 z-thresh 0.5, no manual
-info.R1020J.FR1.bsfilt.peak      = [60  120.1 180 220.1 240 300.1];
-info.R1020J.FR1.bsfilt.halfbandw = [0.5 0.5   0.6 0.5   0.5 0.7];
+% Session 1/1 z-thresh 0.45, 1 manual (tiny tiny peak), using re-ref. Re-ref and non-ref similar spectra.
+info.R1020J.FR1.bsfilt.peak      = [60  120 180 219.9 240 300 ...
+    190.3];
+info.R1020J.FR1.bsfilt.halfbandw = [0.5 0.5 0.7 0.5   0.5 0.8 ...
+    0.5];
+info.R1020J.FR1.bsfilt.edge      = 3.1840;
 
 % Bad Segment Info:
 info.R1020J.FR1.session(1).badsegment = [1,2146;20947,21937;46669,47299;85793,86138;98094,98896;148350,149144;151454,152000;264839,265442;268001,268561;272001,272601;301702,302329;308251,309974;447347,448000;572001,572918;578266,580000;598812,600000;630943,632000;641025,645614;668205,668733;687666,688000;800001,800819;887763,888542;891196,892000;948651,950399;982014,983584;996001,998369;1154204,1156000;1218384,1219810;1226164,1227434;1236001,1236424;1280001,1281224;1284001,1284743;1390989,1391356;1541589,1543262;1669151,1669786;1770680,1773028;1840772,1842587;1853546,1854853;1940377,1941165;1945269,1946950;1952001,1953684;2040261,2042127;2108068,2108899;2180001,2180725;2282586,2282716;2296264,2297015;2324001,2326076;2340777,2342783;2574043,2574783;2652423,2653087;2653858,2655576;2918344,2919049;2964001,2966772;3076259,3076840;3167062,3167759;3230511,3232383];
@@ -325,9 +328,21 @@ info.R1020J.FR1.session(1).badsegment = [1,2146;20947,21937;46669,47299;85793,86
 %%%%%% R1032D %%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Notes:
-% Mostly depth electrodes. Relatively frequent epileptic events, especially
-% in depths. Very buzzy (reference noise?), removed by average referencing.
-% Overall, not too bad.
+% FINISHED FINISHED
+
+% 'R1032D' - 1    - 14T  - 11F   - 95/300    - 0.3167   - 13T  - 11F   - 80/234    - 0.3419   - :)  - Cleaned. 19.
+
+% Mostly depth electrodes. 
+% Lots of reference noise and flat-line channels.
+% Only narrow lines at harmonics. Re-ref cleans baseline. Re-ref and non-ref very similar.
+% Noise is consistent across channels.
+% Mild slink, but low amplitude. 
+% Channels LFS1-4 have periodic synchronous dips. Occasionally RFS1-3 as well. Big dips were marked for rejection.
+% Consider removing these channels from analyses to see if results hold. 
+% Slink periods relatively short. 
+% Perhaps more dips in LFS1-4 could be removed. 
+% Great accuracy, decent number of trials.
+% No researcher notes.
 
 % Channel Info:
 info.R1032D.badchan.broken = {'LFS8', 'LID12', 'LOFD12', 'LOTD12', 'LTS8', 'RID12', 'ROFD12', 'ROTD12', 'RTS8', ... % flat-line channels
@@ -337,9 +352,10 @@ info.R1032D.badchan.epileptic = {};
 % Some channels show large epileptic deviations, but are kept in to prioritize channels: 'LFS1x', 'LFS2x', 'LFS3x', 'LFS4x'
 
 % Line Spectra Info:
-% Session 1/1 z-thresh 2, no manual
-info.R1032D.FR1.bsfilt.peak      = [60, 63.8, 120.1, 180, 240.1 300];  
-info.R1032D.FR1.bsfilt.halfbandw = [0.5, 0.5, 0.5,   0.5, 0.5   0.5];
+% Session 1/1 z-thresh 1 re-ref, no manual. 
+info.R1032D.FR1.bsfilt.peak      = [60   120  180  240  300];
+info.R1032D.FR1.bsfilt.halfbandw = [0.5, 0.5, 0.5, 0.5, 0.5];
+info.R1032D.FR1.bsfilt.edge      = 3.2237;
 
 % Bad Segment Info: 
 info.R1032D.FR1.session(1).badsegment = [6692,7487;13550,14138;16620,17202;22614,23776;50403,51060;76023,79445;105550,106673;109098,109835;111814,112641;130627,131144;200285,200602;201414,201744;209220,209679;212756,215299;219092,219596;250892,251686;259595,260415;266788,267557;292356,292866;296059,297176;318349,319531;323672,324570;344181,344550;348124,349557;357439,357969;382427,383111;402069,403201;412014,412654;428382,429360;437782,438486;455788,456189;498574,499487;506866,508486;510852,511511;527982,528376;539098,539647;575342,575946;594846,595189;605395,605879;687833,688131;693808,694351;751459,751996;771666,772157;811162,811570;815672,816009;853027,853512;860537,861467;890382,891183;920767,921644;922143,923377;926197,927739;959846,960559;966434,966932;976575,976783;985539,986278;989088,989801;992511,993370;1010723,1011118;1024866,1025486;1032666,1033118;1034453,1035479;1050156,1051189;1063382,1063970;1090143,1090564;1104091,1105002;1115866,1116480;1135117,1135602;1138098,1138711;1154001,1154299;1181962,1182273;1197356,1199254;1206098,1206660;1219466,1220537;1227027,1228215;1234660,1235756;1259834,1260701;1283666,1284976;1297917,1298827;1300150,1301783;1312337,1313286;1324249,1325135;1327095,1327735;1366917,1367795;1384279,1385041;1395261,1396202;1399066,1399742;1429305,1430067;1458581,1459163;1511801,1512254;1611640,1611963;1629491,1629983;1634472,1636021;1672382,1672989;1686053,1686925;1687782,1688421;1699608,1700131;1708478,1710021;1787685,1788615;1837124,1837667;1838898,1839673;1847517,1848047;1864324,1865015;1923291,1924008;1936943,1938131;1943014,1943686;1984324,1985699;2004072,2005589;2006749,2008441;2016995,2017422;2028111,2028933;2071556,2072782;2075137,2075809;2102608,2102892;2118995,2119428;2140582,2143137;2154072,2154989;2218195,2218847;2272692,2273254;2296201,2296718;2303175,2303692;2317305,2317731;2328414,2329008;2379246,2380066;2472246,2472654;2474717,2475183;2476308,2477066;2491943,2492247;2535408,2535944;2575827,2576931;2580060,2580602;2667614,2667969;2673117,2673512;2683556,2683970;2767698,2767918;2769078,2770544;2772756,2773260;2785505,2785828;2787685,2788815;2878446,2878899;2909582,2910189;2923723,2924157;2971337,2971667;3007279,3007918;3023311,3023705;3029117,3029422;3031582,3032099;3037782,3038150;3049182,3049680;3086814,3087305;3088349,3088757;3189324,3190022;3240685,3241351;3250588,3251730;3282104,3282557;3343092,3343641;3351233,3351770;3369608,3370157;3386537,3387054;3398795,3399228;3419001,3419635;3454278,3454963;3478511,3478731;3484966,3485505;3493789,3494401;3507260,3507744;3564608,3566032;3585930,3587228;3596461,3597228;3607814,3608350;3625130,3625692;3649872,3650376;3679434,3680338;3707879,3708415;3734652,3735319;3817627,3818086;3828221,3828570;3843317,3844054;3852334,3852845;3914459,3914957;3919034,3919531;3930769,3931860;3956750,3957409;3958993,3959925;3973306,3974688;3987943,3988331;4037685,4038156;4062788,4063505;4081136,4081505;4082252,4082757;4084305,4084635;4116272,4117396;4165427,4166279;4174601,4175015;4236783,4237139;4256169,4256577;4264356,4264789;4270492,4270970];
@@ -403,43 +419,38 @@ info.R1034D.FR1.session(3).badsegment = [306485,307734;376117,377389;405640,4082
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%% R1045E %%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% Notes: Enormous spikes in several channels, and it's screwing up demeaning. 
+% Notes: 
+% FINISHED FINISHED
+
+% 'R1045E' - 1    - 17T  - 27F   - 98/300    - 0.3267   - 6T   - 21F   - 79/235    - 0.3362   - :)  - Cleaned. 51. ***
+
+% End of segment goes bad. Samples 2603373 onward are bad.
+% Enormous spikes in several channels, screwing up demeaning. 
+% Will have to clean lines around spikes. 
 % Spikes are at samples 431722:431752, 1078427:1078454, and 2204508:2204508
 % Clean are 1:431721, 431753:1078426, 1078455:2204507, and 2204534:2603373
-% Samples 2603373 onward are bad.
+% Less spikes in re-ref vs. non-ref (3 vs. 9). Baselines similar. 
+% Noise consistent across channels.
+% LATS1-4 are coherent, strongly slinky, high amplitude.
+% Reference buzz remains in surface channels.
+% LAFS and remaining LATS are very smooth and flat, whereas other surface channels have more high frequency activity.
+% No more discrete events to remove (other than buzz), but does not look very clean.
 
 % Channel Info:
 info.R1045E.badchan.broken = {'RPHD1', 'RPHD7', 'RPTS7', 'LIFS10', 'LPHD9', ... % large fluctuations and sinusoidal noise
     'R*'}; % odd-number naming convention
 
-info.R1045E.badchan.epileptic = {'LAHD2', 'LAHD3', 'LAHD4', 'LAHD5', ...
-    'LMHD1', 'LMHD2', 'LMHD3', 'LMHD4', 'LPHD2', 'LPHD3', 'LPHGD1', 'LPHGD2', 'LPHGD3', ...
-    'LPHGD4', 'RAHD1', 'RAHD2', 'RAHD3', 'RPHGD1', 'RPHGD2', 'RPHGD3'}; % all Kahana
+info.R1045E.badchan.epileptic = {'LAHD2', 'LAHD3', 'LAHD4', 'LAHD5', ... % Kahana
+    'LMHD1', 'LMHD2', 'LMHD3', 'LMHD4', 'LPHD2', 'LPHD3', 'LPHGD1', 'LPHGD2', 'LPHGD3', ... % Kahana
+    'LPHGD4', 'RAHD1', 'RAHD2', 'RAHD3', 'RPHGD1', 'RPHGD2', 'RPHGD3' ... % Kahana
+    'LATS1', 'LATS2', 'LATS3', 'LATS4'}; % strong coherent slink that lines up with epileptic events in depths
 
 % Line Spectra Info:
-% z-thresh 1.4
-% [60 119.9000 172.1000 179.8000 197 199.8000 239.8000 247.3000 269.7000 299.7000]
-% [0.5000 0.5000 0.5000 0.5000 0.5000 0.5000 0.5000 0.5000 0.5000 0.5000]
-
-% z-thresh 1.5
-% [60 119.9000 172.2000 179.8000 239.8000 269 299.7000 ... 
-%     247.3 249.8 298.2]
-% [0.5000 0.5000 0.5000 0.5000 0.5000 0.5000 0.5000 ... 
-%     0.5 0.5 0.5]
-
-% z-thresh 1
-% 59.9000   75.2000   97.0000  119.9000  149.2000  172.1000  179.8000  199.9000  219.9000  239.8000  247.3000 269.1000  298.3000  299.7000
-% [0.8000 0.5000 0.5000 0.5000 0.5000 0.5000 0.5000 0.5000 0.5000 0.5000 0.5000 0.5000 0.5000 0.8000]
-
-% z-thresh 3
-% [60 119.9000 172.2000 179.8000 239.7000 247.3000 269 299.7000]
-% [0.5000 0.5000 0.5000 0.5000 0.5000 0.5000 0.5000 0.5000]
+% Session 1/1 z-thresh 2 on re-ref, no manual. 
+info.R1045E.FR1.bsfilt.peak      = [59.9 179.8 299.6];
+info.R1045E.FR1.bsfilt.halfbandw = [0.5  0.5   0.5];
+info.R1045E.FR1.bsfilt.edge      = 3.1852;
      
-% DO NOT USE. These were estimated with wavy baseline.
-% Session 1/1 manual b/c of wavy baseline (mean of channels not 0 b/c of huge deflections)
-% info.R1045E.FR1.bsfilt.peak      = [59.9 119.9 172.1 179.8 239.7 247.3 299.7];
-% info.R1045E.FR1.bsfilt.halfbandw = [0.5  0.5   0.5   0.5   0.5   0.5   0.5];
-
 % Bad Segment Info:
 % Have to remove sample 2603373 onward b/c of file corruption.
 % Added bad segments of big spikes.
@@ -474,38 +485,35 @@ info.R1059J.FR1.session(2).badsegment = [1,1744;3270,3324;6013,6135;27597,27622;
 %%%%%% R1075J %%%%%% 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Notes:
+% FINISHED FINISHED
+
+% 'R1075J' - 2    - 7T   - 83F   - 150/600   - 0.2500   - 7T   - 31F   -                      - :)  - Good pending clean. ***
+
 % Lots of high frequency (> 240 Hz) noise on half of the channels, especially surface. Squashed by lowpass filter.
-% Otherwise, very clean.
+% Re-referencing introduces weird side lobes on lines at harmonics. Using non-ref for peak detection.
+% Additionally, left channels have the wide side lobes. Removing these. 
+% In 2 sessions, the second session has more apparent peaks at more frequencies. Combining both sessions captures all peaks.
+% Peak detection on combined sessions.
+% Some buzz.
+% Relatively free of large interictal events, just slinky.
+% Some occasional dips.
+% Great accuracy and number of trials.
 
 % Channel Info:
 info.R1075J.badchan.broken = {'LFB1', 'LFE4', ... % big fluctuations, LFE4 breaks in session 2
     'RFD1', 'LFD1', 'RFD8', 'LFC1' ... % sinusoidal noise + big fluctuations
     'L*' ... % bad line spectra (ringing side lobes)
+    'RFD2', 'RFD3', 'RFD4', 'RFB1', 'RFB3', 'RFB4', ... % big drifts, almost look like eye channels
+    'RFA8' ... % buzzy
     };
 
 info.R1075J.badchan.epileptic = {}; % no Kahana channels
 
 % Line Spectra Info:
-% Left channels are the ones with lines with side lobes. Could throw these out.
-% Session 1/2 z-thresh 1 (right channels only)
-% [60 180 300]
-% [0.5 0.5 0.5]
-
-% Session 1/2 z-thresh 0.5 + manual (big lines with side lobes)
-info.R1075J.FR1.bsfilt.peak      = [60  220 300 ... 
-    120   180   240];
-info.R1075J.FR1.bsfilt.halfbandw = [0.5 0.7 1 ... 
-    1.5   2.5   1.7];
-
-% Session 2/2 z-thresh 1 (right channels only)
-% [60  120 180 230 300]
-% [0.5 0.5 0.5 0.5 0.5]
-
-% Session 2/2 z-thresh 2 + manual (big lines with side lobes, one small)
-info.R1075J.FR1.bsfilt.peak      = [60  220.1 300 ... 
-    120   180   240 280];
-info.R1075J.FR1.bsfilt.halfbandw = [0.5 0.5   0.7 ... 
-    2.5   3.5   2.5 0.5];
+% z-thresh 1
+info.R1075J.FR1.bsfilt.peak      = [60  120 180 240 300];
+info.R1075J.FR1.bsfilt.halfbandw = [0.5 0.5 0.5 0.5 0.5]; 
+info.R1075J.FR1.bsfilt.edge      = 3.1840;
 
 % Bad Segment Info:
 
@@ -513,10 +521,18 @@ info.R1075J.FR1.bsfilt.halfbandw = [0.5 0.5   0.7 ...
 %%%%%% R1080E %%%%%% 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Notes:
+% FINISHED FINISHED
+
+% 'R1080E' - 2    - 6T   - 10F   - 107/384   - 0.2786   - 6T   - 6F    -                      - :)  - Good pending clean. ***
+
 % Lots of reference noise, but for surface channels, it goes away after re-referencing.
 % A couple borderline slinky channels, but relatively low amplitude (RPTS7, RSFS2). Will keep them in. 
 % Weird number naming conventions in surface channels.
-% Re-referencing fixes very bad baseline of line spectra.
+% Re-referencing fixes very bad baseline of line spectra. 
+% Doing line detection on individual re-ref sessions. 
+% Noise consistent on channels.
+% Low amplitude slink in remaining channels, no events.
+% Buzz remains, use depth channels to detect strong buzz events.
 
 % Channel Info:
 info.R1080E.badchan.broken = {'RLFS7', 'L9D7', 'R12D7', 'R10D1', ... sinusoidal noise, session 1
@@ -528,15 +544,9 @@ info.R1080E.badchan.epileptic = {'RPTS7' ... % very slinky, high amplitude
     'R6D1', 'R4D1', 'R4D2', 'L1D8', 'L1D9', 'L1D10', 'L3D8', 'L3D9', 'L3D10', 'L7D7', 'L7D9'}; % Kahana
 
 % Line Spectra Info:
-% Session 1/2 z-thresh 1, no manual, after re-referencing
-info.R1080E.FR1.bsfilt.peak      = [60  179.8 299.7];
-info.R1080E.FR1.bsfilt.halfbandw = [0.5 0.5   0.7];
-
-% Session 2/2 z-thresh 1 + manual (tiny peak), after re-referencing
-info.R1080E.FR1.bsfilt.peak      = [59.9 179.9 299.7 ...
-    239.8];
-info.R1080E.FR1.bsfilt.halfbandw = [0.5  0.5   0.5 ...
-    0.5];
+info.R1080E.FR1.bsfilt.peak      = [59.9 179.8 239.7 299.7]; % 239.7 is apparent in session 2, but not 1
+info.R1080E.FR1.bsfilt.halfbandw = [0.5 0.5   0.5   0.6];
+info.R1080E.FR1.bsfilt.edge      = 3.1852;
 
 % Bad Segment Info:
  
@@ -582,9 +592,15 @@ info.R1100D.badchan.epileptic = {
 %%%%%% R1120E %%%%%% 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Notes: 
+% FINISHED FINISHED
+
+% 'R1120E' - 2    - 14T  - 4F    - 207/600   - 0.3450   - 11T  - 4F    -                      - :)  - Good pending clean. Not the cleanest.
+
 % When switching to channel labels using individual atlases, channel numbers go to 14T and 4F (vs. 12T and 1F)
 % Very clean line spectra.
 % Remaining channels very slinky. Not a particularly clean subject.
+% Cleaning individual re-ref sessions, baseline too wavy on combined. Same peaks on both sessions. 
+% Lots of slinky episodes, some large amplitude episodes.
 
 % Channel Info:
 info.R1120E.badchan.broken = {
@@ -593,15 +609,12 @@ info.R1120E.badchan.epileptic = {'RAMYD1', 'RAMYD2', 'RAMYD3', 'RAMYD4', 'RAMYD5
     'LANTS10', 'LANTS2', 'LANTS3', 'LANTS4'}; % big fluctuations with one another
 
 % Line Spectra Info:
-% Session 1/2 z-thresh 1, no manual
-info.R1120E.FR1.bsfilt.peak      = [59.9 119.9 179.9 239.8 298.5 299.7];
-info.R1120E.FR1.bsfilt.halfbandw = [0.5  0.5   1.1   0.5   0.5   2];
-
-% Session 2/2 z-thresh 1.25, 1 manual (little peak)
-info.R1120E.FR1.bsfilt.peak      = [60  119.9 179.9 239.8 299.7 ...
-    175.2]; % manual
-info.R1120E.FR1.bsfilt.halfbandw = [0.5 0.5   0.7   0.5   1.4 ...
-    0.5]; % manual
+% session 2 z-thresh 1 + 2 manual
+info.R1120E.FR1.bsfilt.peak      = [60  179.8 299.7 ...
+    119.9 239.8]; % manual
+info.R1120E.FR1.bsfilt.halfbandw = [0.5 0.5   1 ...
+    0.5   0.5]; % manual
+info.R1120E.FR1.bsfilt.edge      = 3.1852;
 
 % Bad Segment Info:
 
@@ -689,11 +702,16 @@ info.R1142N.FR1.session(1).badsegment = [1,1915;7459,7503;15373,15544;20396,2106
 %%%%%% R1147P %%%%%% 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Notes: 
-% Dominated by line noise. Cannot tell which channels are broken without prior filtering. 
-% Even after notch filtering, really bad noise. LP filter helps, but now lots of spikes across channels. Spikes are different across electrodes.
-% Re-referencing does not work, introduces spikes into clean channels.
+% FINISHED FINISHED
 
-% Lines are across all channels in Session 1, and no channels are safe.
+% 'R1147P' - 3    - 40T  - 32F   - 101/559   - 0.1807   - 7T   - 14F   -                      - :)  - Doable, but maybe too many lines.
+
+% Dominated by line noise. Cannot tell which channels are broken without prior filtering. 
+% Must be re-referenced prior to line detection.
+% Individual session lines show up in combined, so using re-ref combined for line detection.
+% Have to throw out grids to preserve 80-150 Hz activity.
+% Good number of trials.
+% Interictal spikes, deflections, buzz. Will require intensive cleaning.
 
 % Channel Info:
 info.R1147P.badchan.broken = {'LGR64', 'LGR1' ... % big fluctuations
@@ -701,53 +719,65 @@ info.R1147P.badchan.broken = {'LGR64', 'LGR1' ... % big fluctuations
 
 info.R1147P.badchan.epileptic = {'LDH2', 'LDA2', 'LMST2', 'LDH3', 'LDA3' ... Kahana epileptic
     'LPST6' ... % bad spikes
-    'LAST1', 'LAST2', 'LAST3', 'LMST3', 'LMST4'}; % frequency interictal spikes
+    'LAST1', 'LAST2', 'LAST3', 'LMST3', 'LMST4'}; % frequent interictal spikes
 
 % Line Spectra Info:
-% Have to throw out grids to preserve 80-150 Hz activity.
-
-% Session 1/3 z-thresh 0.75 + 1 manual
-info.R1147P.FR1.bsfilt.peak      = [60  83.2 100.1 120 166.4 180 220 221.9 240 260 280 300 ...
-    140 160 200];
-info.R1147P.FR1.bsfilt.halfbandw = [0.5 0.5  0.5   0.5 0.6   0.5 0.8 0.6   0.5 0.5 0.5 0.5 ...
-    0.5 0.5 0.5];
-
-% Session 2/3 z-thresh 0.75, no manual
-info.R1147P.FR1.bsfilt.peak      = [60  100 120 140.1 180 200 220.2 222.3 240.1 260.1 300];
-info.R1147P.FR1.bsfilt.halfbandw = [0.5 0.5 0.5 0.5   0.5 0.5 0.9   0.6   0.5   0.5   0.5];
-
-% Bad Segment Info:
+% z-thresh 0.5 + 1 manual
+info.R1147P.FR1.bsfilt.peak      = [60 83.2000 100 120 140 166.4000 180 200 221.4000 240 260 280 300 ...
+    160];
+info.R1147P.FR1.bsfilt.halfbandw = [0.5000 0.5000 0.5000 0.5000 0.5000 0.5000 0.5000 0.5000 3.6000 0.5000 0.7000 0.5000 0.5000 ...
+    0.5];
+info.R1147P.FR1.bsfilt.edge      = 3.1840;
+     
+% Bad Segment Info: 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%% R1149N %%%%%% 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Notes:
-% Lots of reference noise and also antenna channels. Occasional line noise
-% in channels even after filtering out line spectra. Lots of line spectra artifacts.
-% Lots of low buzz in channels. Remaining channels are very slinky.
+% FINISHED FINISHED
+
+% 'R1149N' - 1    - 39T  - 16F   - 64**/300  - 0.2133   - 23T  - 4F                           - ??? - Too few correct.
+
+% ALEX grid is particularly affected by wide line noise, needs to be removed.
+% Remaining channels are slinky, periods of high amp slink that will need to be removed.
+% Lots of intermittently buzzy channels, hopefully got them all. 
+% Both slink episodes and interictal spikes need to be removed. Not the cleanest.
+% Re-ref cleans spectra baseline, using re-ref for peak detection.
+% Could be a good subject, but perhaps not enough trials will remain after cleaning.
 
 % Channel Info:
-info.R1149N.badchan.broken = {'ALEX*', 'AST2', 'G1', 'LF2', 'LF3'};
+info.R1149N.badchan.broken = {'ALEX1', 'ALEX8', 'AST2', ... % flatlines, big fluctuations
+    'ALEX*' ... % wide line noise
+    };
 info.R1149N.badchan.epileptic = {'PST1', 'TT1', 'MST1', 'MST2', 'AST1', ... % Kahana
-    'TT*', 'OF*', 'LF*', 'G9', 'AST3', 'AST4', 'G18', 'G2', 'G26', 'G27', 'G28', 'G29', 'G3', 'MST4' ... % buzzy channels
+    'AST3', 'AST4', 'MST2', 'MST3', 'MST4', 'OF*', 'TT*', 'LF*', 'G1', 'G2', 'G3', 'G18', 'G19', 'G2', 'G20', 'G26', 'G27', 'G28', 'G29', 'G3', 'G9' ... % buzzy channels
     };
 
 % Line Spectra Info:
-% Session 1/1 z-thresh 0.8 + manual (small)
-info.R1149N.FR1.bsfilt.peak      = [60  120 180 211.7 220 226.8 240 241.9 257 272.1 280 287.3 300.1 ...
+% Session 1/1 z-thresh 0.5 + manual (small)
+info.R1149N.FR1.bsfilt.peak      = [60 120 180 211.6000 220.1000 226.8000 240 241.9000 257.1000 272.2000 280 287.3000 300 ...
     136 196.5];
-info.R1149N.FR1.bsfilt.halfbandw = [0.5 0.5 1   0.5   0.5 0.5   1.5 0.5   0.5 0.5   0.6 0.5   1.5 ...
+info.R1149N.FR1.bsfilt.halfbandw = [0.6000 0.5000 1 0.5000 0.5000 0.5000 1.3000 0.5000 0.5000 0.5000 0.5000 0.5000 1.4000 ...
     0.5 0.5];
-
+info.R1149N.FR1.bsfilt.edge      = 3.0980;
+     
 % Bad Segment Info:
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%% R1151E %%%%%% 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Notes:
+% FINISHED FINISHED
+
+% 'R1151E' - 3    - 7T   - 5F    - 208/756   - 0.2751   - 8T   - 3F    -                      - :)  - Good pending cleaning. ***
+
 % Pretty bad noise specific to surface channels. Re-ref before line spectra helps find sharp spectra.
-% Remaining channels are kinda coherent and slinky. 
+% Using combined re-ref for detecting peaks
+% Remaining channels are kinda coherent and slinky, but nothing major.
+% No spikes, just occasional buzz. Relatively clean.
 % Session 3 goes bad from time 2100 onward, also between 1690 and 1696.
+% Great trial number and accuracy, but poor coverage.
 
 % Channel Info:
 info.R1151E.badchan.broken = {'RPHD8', 'LOFMID1' ... sinusoidal noise and fluctuations, session 1
@@ -758,29 +788,50 @@ info.R1151E.badchan.epileptic = {'LAMYD1', 'LAMYD2', 'LAMYD3', 'LAHD1', 'LAHD2',
 
 % Line Spectra Info:
 % Lots of line spectra, but baseline is pretty ok. 
+info.R1151E.FR1.bsfilt.peak      = [60  180 210.2 215 220.1 300 ...
+    100 120 123.7 139.9 239.9 247.3 260];
+info.R1151E.FR1.bsfilt.halfbandw = [0.5 0.5 0.5   0.5 0.5   0.5 ...
+    0.5 0.5 0.5   0.5   0.5   0.5   0.5];
 
-% Session 1/3 z-thresh 2.05 + manual on re-ref
-info.R1151E.FR1.bsfilt.peak      = [60  180 210.1 214.9 220 300 ...
-    100 120 123.7 140 240 247.4 260]; % manual
-info.R1151E.FR1.bsfilt.halfbandw = [0.5 0.5 0.5   0.5   0.5 0.5  ...
-    0.5 0.5 0.5   0.5 0.5 0.5   0.5]; % manual
+% Bad Segment Info:
 
-% Session 2/3 z-thresh 2 + manual on re-ref
-info.R1151E.FR1.bsfilt.peak      = [60  180 210.2 215.1 220.3 299.9 ...
-    100.3 120 139.6 239.9 159.6]; % manual
-info.R1151E.FR1.bsfilt.halfbandw = [0.5 0.5 0.5   0.5   0.5   0.5 ... 
-    0.5   0.5 0.5   0.5   0.5]; % manual
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%% R1154D %%%%%% 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Notes:
+% FINISHED FINISHED
 
-% Session 3/3 part 1 z-thresh 1.5 + manual
-info.R1151E.FR1.bsfilt.peak      = [60  180 209.8 214.9 220 300.1 ...
-    120 240 260];
-info.R1151E.FR1.bsfilt.halfbandw = [0.5 0.5 0.5   0.5   0.5 0.5 ...
-    0.5 0.5 0.5];
+% 'R1154D' - 3    - 39T  - 20F   - 271/900   - 0.3011   - 11T  - 20F                          - :)  - ***
 
-% Session 3/3 part 2 z-thresh 1.5 + manual
-[60  180 210.1 215 219.8 300 ...
-    120];
-[0.5 0.5 0.5   0.5 0.5   0.5 ...
+% No Kahana electrode info available.
+
+% Lots of line spectra, though remaining baseline is flat.
+% Needs LP.
+% Some buzz that can be removed by re-ref.
+% Discrete large events, decent number of slinky channels, decent number of low-amplitude fluctuating channels.
+% Using combined session re-ref for line detection, plus manual adding of other peaks from individual sessions
+% Nothing that makes me distrust this subject.
+
+% Session 2 is corrupt after 2738 seconds.
+% Session 2 still has buzzy episodes after re-ref and LP.
+% Very slinky channels in Session 2, might be worse than Session 1.
+
+% First 242 seconds of Session 3 are corrupted.
+% Session 3 is very buzzy too.
+
+% Channel Info:
+info.R1154D.badchan.broken = {'LOTD*', 'LTCG23' ... % heavy sinusoidal noise
+    'LTCG*'}; % removed to control line spectra noise
+info.R1154D.badchan.epileptic = {'LSTG1' ... % intermittent buzz
+    };
+
+% Line Spectra Info: 
+info.R1154D.FR1.bsfilt.peak      = [60 120 138.6 172.3 180 200 218.5 220 222.9 225.1 240 260 280 300 ... % combined z-thresh 0.5
+    99.9 140 160 205.9 277.2 ... % manual combined
+    111.5]; % manual session 1
+
+info.R1154D.FR1.bsfilt.halfbandw = [0.5 0.5 0.5  0.5   0.5 0.5 0.5   0.7 2.5   0.5   0.5 0.5 0.5 0.5 ...
+    0.5  0.5 0.5 0.5   0.5 ...
     0.5];
 
 % Bad Segment Info:
@@ -795,71 +846,6 @@ info.R1155D.badchan.broken = {
     };
 info.R1155D.badchan.epileptic = {
     }; 
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%%%% R1167M %%%%%% 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% Lots of reference noise, reref helps. Some ambiguous spiky channels remain.
-% LPT channels were wonky, so careful if they are the ones showing the
-% effects.
-
-% Age 33
-
-info.R1167M.badchan.broken = {'LP7', ... % sinusoidal noise
-    'LP8'}; % spiky and large fluctuations
-
-info.R1167M.badchan.epileptic = {'LP1', 'LAT8', 'LAT11', 'LAT12', 'LAT13', 'LAT16', ... % Kahana
-    'LAI1', 'LAI2'}; % high frequency noise on top
-
-% Session 1/2 z-thresh 1.25
-info.R1167M.FR1.bsfilt.peak      = [60 100.4000 120 180 219.7000 221.8000 239.9000 259.5000 299.9000];
-info.R1167M.FR1.bsfilt.halfbandw = [0.5000 0.5000 0.5000 0.5000 1.6000 0.5000 0.5000 0.6000 0.5000];
-
-% Session 2/2 z-thresh 0.6
-info.R1167M.FR1.bsfilt.peak      = [58.8000   59.4000   60.0000   60.7000   95.4000  100.0000  120.0000  140.0000  160.1000  179.4000  180.1000 200.0000  220.4000  240.0000  260.0000  280.0000  300.1000 ...
-    80]; % manual
-info.R1167M.FR1.bsfilt.halfbandw = [0.5000    0.5000    0.5000    0.5000    0.5000    0.9000    0.5000    0.5000    0.5000    0.5000    0.5000 0.5000    2.3000    0.5000    1.0000    0.6000    0.5000 ...
-    0.9]; % manual
-
-info.R1167M.FR1.session(1).badsegment = [3574,5023;5468,6466;7684,8419;20092,21001;27678,28668;37140,37356;41003,41646;62699,63278;65901,66791;89033,89431;91999,92000;117221,117660;136656,137620;139916,140708;142906,143850;158062,159796;163129,163485;176904,177536;178280,180360;182616,183404;184001,185219;209113,209972;213277,214219;219404,220959;259244,259901;270057,270925;280401,281423;282387,283598;284780,285743;307205,308623;319716,320842;389334,390109;392839,394052;394845,396647;397072,400425;407347,408154;410753,411077;448796,449321;451728,452340;470126,471264;477097,477888;484632,485845;497535,498200;530239,531114;544917,546668;549464,551091;551159,552783;554487,555525;556390,557297;557584,558549;562140,562842;568202,568926;572160,574191;575718,576623;583653,584163;585261,586133;587840,588728;591693,592906;600541,600942;602554,603178;605148,605853;606908,607832;611812,612292;616001,616598;619218,619861;620621,621442;626484,630783;633465,634036;635083,636000;645339,645810;653232,653797;715236,716000;721656,722391;722954,723589;727312,728000;743640,743893;758970,759971;774882,776000;828001,828835;839301,840492;848726,849310;851048,852000;863818,864484;868917,869466;883059,883592;907337,908687;919666,920226;921205,921545;927640,927896;931485,932478;959740,961379;972001,972703;973484,974176;982567,983157;995021,995686;1003231,1004000;1031196,1031888;1058946,1060429;1066766,1067399;1082519,1083262;1083661,1085216;1122833,1123525;1141299,1142536;1148001,1148475;1149057,1150058;1157874,1158837;1223363,1224324;1244224,1245262;1258919,1259622;1278387,1279286;1296151,1296902;1297925,1298592;1303105,1304000;1344863,1346254;1346844,1347455;1378288,1380000;1380210,1380905;1398360,1398953;1413788,1415528;1430742,1431880;1439836,1440518;1441744,1442148;1447690,1448192;1448949,1449491;1455724,1457234;1480608,1481886;1496329,1498259;1503299,1504292;1520423,1521429;1568001,1568416;1573672,1574388;1581436,1582313;1586035,1586697;1587339,1587982;1592941,1593603;1601057,1602203;1603220,1604612;1607180,1607904;1613344,1614060;1614766,1615568;1619000,1619560;1637113,1637899;1651049,1652599;1704187,1705249;1706114,1706731;1707254,1708883;1716406,1716609;1721742,1722157;1727302,1728131;1730910,1732190;1742024,1742603;1750967,1753644;1833041,1833878;1835602,1836443;1866556,1867323;1870594,1871616;1873557,1874275;1914645,1916000;1921750,1922738;1936519,1937198;1938019,1938848;1939298,1939923;1952208,1952773;1957008,1957982;1989807,1990248;1992377,1993832;2005624,2007073;2027457,2027804;2029132,2029418;2037909,2038130;2041406,2041843;2052001,2052515;2055811,2056541;2068847,2069706;2077003,2077808];
-info.R1167M.FR1.session(2).badsegment = [59923,60574;63558,64259;69264,70353;74277,75329;102823,103434;127279,127974;140041,140469;143352,143708;165656,166595;194006,194872;196796,197321;227866,228426;262261,263082;326290,326686;393207,394528;396286,397297;409847,410939;434011,435772;463086,464000;467599,469173;497213,498318;508046,511313;535693,536462;542731,543452;543464,544739;580001,582189;589987,592945;595029,596000;628842,629840;640616,641133;646293,647020;685600,686654;687189,688501;691394,692094;701613,701974;709258,709829;724557,725550;727522,728055;733223,733601;750261,750853;752001,752561;760151,761310;764643,766106;777127,778127;806581,807243;828060,831995;832001,835990;836001,839998;840001,855998;856001,860000;940957,941894;990261,991638;1014148,1014660;1038067,1038590;1097304,1097824;1106930,1107807;1115905,1116544;1121645,1122168;1122869,1124147;1138997,1140902;1142895,1143396;1164041,1164953;1216001,1217700;1220001,1220649;1304001,1304399;1311371,1312212;1329422,1330205;1348001,1349012;1399360,1400948;1447118,1447458;1460001,1460512;1486406,1486987;1505089,1505947;1581997,1582662;1607836,1608403;1632952,1633012;1654379,1655022;1692001,1692558;1704256,1706160;1776734,1777310;1810737,1811420;1821799,1823014;1832780,1836000;1836288,1838958;1848208,1848875;1859519,1860319];
-
-% First cleaning, where I was relatively unaggressive in cleaning out big fluctuations.
-% info.R1167M.FR1.session(1).badsegment = [37142,37344;89033,89429;163129,163469;259250,259900;407368,408122;410755,411081;530291,530437;554512,555489;774886,776472;827947,828821;883069,883578;907727,908612;921239,921429;1082561,1083227;1083681,1085205;1223384,1224281;1345533,1346147;1430762,1431691;1496380,1497558;1607234,1607799;1651123,1652462;1707308,1708777;1866573,1867287;1870621,1871562;1873577,1874239;2037952,2038078];
-% info.R1167M.FR1.session(2).badsegment = [60001,60466;165698,166300;194025,194836;196835,197284;262307,263038;393231,394324;409884,410917;434073,435727;463097,464000;497222,498260;508763,511304;535722,536436;543769,544591;777198,778018;1038105,1038546;1139014,1140845;1164066,1164917;1215904,1217661;1303928,1304374;1348001,1348978;1399379,1400925;1447166,1447384;1654424,1654977;1704279,1706082;1821823,1822985];
-
-
-
-
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%%%% R1154D %%%%%% 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% No Kahana electrode info available.
-
-% Lots of line spectra, though remaining baseline is flat.
-% Needs LP.
-% Some buzz that can be removed by re-ref.
-% Discrete large events, decent number of slinky channels, decent number of low-amplitude fluctuating channels.
-% Nothing that makes me distrust this subject.
-% LTCG grid needs to be re-referenced separately.
-
-% Session 2 is corrupt after 2738 seconds.
-% Session 2 still has buzzy episodes after re-ref and LP.
-% Very slinky channels in Session 2, might be worse than Session 1.
-
-% First 230 seconds of Session 3 are corrupted.
-% Line spectra are much clearer in Session 3. Still some small ones.
-info.R1154D.badchan.broken = {'LOTD*', 'LTCG23' ...
-    'LTCG*'};
-info.R1154D.badchan.epileptic = { ...
-    };
-
-% z-thresh 0.7
-info.R1154D.FR1.bsfilt.peak = [60 120 180 200 218.4000 220.1000 222.7000 240 260 280.1000 300 ...
-    100 111.5 140 160];
-info.R1154D.FR1.bsfilt.halfbandw = [0.5000 0.5000 0.5000 0.5000 0.9000 0.5000 1.6000 0.5000 0.5000 0.5000 0.5000 ...
-    0.5 0.5 0.5 0.5];
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%% R1156D %%%%%% 
@@ -900,51 +886,127 @@ info.R1159P.badchan.epileptic = {'RDA1', 'RDA2', 'RDA3', 'RDA4', 'RDH1', 'RDH2',
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%% R1162N %%%%%% 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Notes:
+% FINISHED FINISHED
+
+% 'R1162N' - 1    - 25T  - 11F   - 77**/300  - 0.2567   - 14T  - 11F                          - :)  - Good pending clean.
+
 % No Kahana electrode info available.
 % Very clean, only occassional reference noise across channels. WRONG. I
 % WAS WRONG. VERY SHITTY.
 % Mostly only harmonics in line spectra. Baseline has slight wave to it.
+% Line detection on re-ref. 
 % Data is ambiguously dirty (can't quite tell where bad things start and stop), but not so bad that this subject is untrustworthy.
-info.R1162N.badchan.broken = {'AST2'};
-info.R1162N.badchan.epileptic = {};
+% Some deflections, a few buzzy channels removed.
+% Not as bad.
 
-info.R1162N.FR1.bsfilt.peak = [60 120.1 180 238.5 239.9 300 ... % Session 1/1 z-thresh 0.5
+% Channel Info:
+info.R1162N.badchan.broken = {'AST2'};
+info.R1162N.badchan.epileptic = {'AST*', 'ATT*' ... % buzzy and synchronous spikes
+    'PST2', 'PST3'}; % intermittent buzz 
+
+% Line Spectra Info:
+info.R1162N.FR1.bsfilt.peak      = [60  120 180 239.9 300 ... % Session 1/1 z-thresh 1
     220]; % manual, tiny tiny peak
-info.R1162N.FR1.bsfilt.halfbandw = [0.5000 0.5000 0.5000 0.5 0.8000 0.6000 ... % Session 1/1 z-thresh 0.5
+info.R1162N.FR1.bsfilt.halfbandw = [0.5 0.5 0.5 0.7   0.6 ...
     0.5]; % manual, tiny tiny peak
+
+% Bad Segment Info:
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%% R1166D %%%%%% 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Notes:
+% FINISHED FINISHED
+
+% 'R1166D' - 3    - 5T   - 38F   - 129/900   - 0.1433   - 5T   - 20F                          - :)   - ***
+
 % Seizure onset zone "unreported".
 % LFPG seem kinda wonky. Needs re-referencing and LP filter before cleaning. Lots of buzz still.
 % Session 2: maybe some slight buzz and "ropiness" on LFPG temporal channels (24, 30-32).
-% Lots and lots of line spectra, some of which are pretty wide.
-info.R1166D.badchan.broken = {'LFPG14', 'LFPG15', 'LFPG16' ...
+% A few line spectra between 80 and 150Hz, but much smaller with re-ref
+% Line detection on re-ref. 
+% Buzzy episodes need to be cleaned out.
+% No major events or slink, but buzz is worrying. 
+% Lots of trials, low accuracy, ok coverage.
+
+% Channel Info:
+info.R1166D.badchan.broken = {'LFPG14', 'LFPG15', 'LFPG16' ... % big deflections
     };
 info.R1166D.badchan.epileptic = {'LSFPG*' ... % for re-referencing without fat lines
-    'LFPG5', 'LFPG6', 'LFPG7', 'LFPG8'};
+    'LFPG5', 'LFPG6', 'LFPG7', 'LFPG8'}; % wonky fluctuations together with one another
 
-info.R1166D.FR1.bsfilt.peak = [60 120 180 200 217.9000 220.2000 223.2000 300 ...
-    89.1 100.1 111.6 140 160 240 260 280];
-info.R1166D.FR1.bsfilt.halfbandw = [0.5000 0.5000 0.5000 0.5000 0.5000 0.5000 0.6000 0.5000 ...
-    0.5  0.5   0.5   0.5 0.5 0.5 1.5 0.5];
+% Line Spectra Info:
+info.R1166D.FR1.bsfilt.peak = [60 120 180 200 217.8000 218.2000 218.8000 220.1000 223.7000 240 300 ...
+    100.1 140 160 260 280];
+info.R1166D.FR1.bsfilt.halfbandw = [0.5000 0.5000 0.5000 0.5000 0.5000 0.5000 0.5000 0.5000 1.6000 0.5000 0.5000 ...
+    0.5 0.5 0.5 0.5 0.5];
+info.R1166D.FR1.bsfilt.edge = 3.1840;
+
+% Bad Segment Info:
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%% R1167M %%%%%% 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Notes:
+% FINISHED FINISHED
+
+% 'R1167M' - 2    - 39T  - 20F   - 166/372   - 0.4462   - 33T  - 18F   - 127/281   - 0.452    - :)  - Cleaned. 33. Flat slope. 
+
+% Line detection on re-ref. Quite a few little line spectra 80-150Hz. 
+% LPT channels were wonky, so careful if they are the ones showing the effects.
+% Has a bit of buzz still. Could go through and clean these out.
+
+% Channel Info:
+info.R1167M.badchan.broken = {'LP7', ... % sinusoidal noise
+    'LP8'}; % spiky and large fluctuations
+
+info.R1167M.badchan.epileptic = {'LP1', 'LAT8', 'LAT11', 'LAT12', 'LAT13', 'LAT16', ... % Kahana
+    'LAI1', 'LAI2'}; % high frequency noise on top
+
+% Line Spectra Info:
+% z-thresh 0.45 + manual on combined re-ref. 
+info.R1167M.FR1.bsfilt.peak      = [60 100.2000 120 180 199.9000 220.5000 240 259.8000 280 300 ...
+    95.3 96.9 139.6 140.7 160 181.3];
+info.R1167M.FR1.bsfilt.halfbandw = [0.5000 0.5000 0.5000 0.5000 0.5000 2.9000 0.5000 0.8000 0.5000 0.5000 ...
+    0.5  0.5  0.5   0.5   0.5 0.5];
+info.R1167M.FR1.bsfilt.edge = 3.1840;
+
+% Bad Segment Info:
+info.R1167M.FR1.session(1).badsegment = [3574,5023;5468,6466;7684,8419;20092,21001;27678,28668;37140,37356;41003,41646;62699,63278;65901,66791;89033,89431;91999,92000;117221,117660;136656,137620;139916,140708;142906,143850;158062,159796;163129,163485;176904,177536;178280,180360;182616,183404;184001,185219;209113,209972;213277,214219;219404,220959;259244,259901;270057,270925;280401,281423;282387,283598;284780,285743;307205,308623;319716,320842;389334,390109;392839,394052;394845,396647;397072,400425;407347,408154;410753,411077;448796,449321;451728,452340;470126,471264;477097,477888;484632,485845;497535,498200;530239,531114;544917,546668;549464,551091;551159,552783;554487,555525;556390,557297;557584,558549;562140,562842;568202,568926;572160,574191;575718,576623;583653,584163;585261,586133;587840,588728;591693,592906;600541,600942;602554,603178;605148,605853;606908,607832;611812,612292;616001,616598;619218,619861;620621,621442;626484,630783;633465,634036;635083,636000;645339,645810;653232,653797;715236,716000;721656,722391;722954,723589;727312,728000;743640,743893;758970,759971;774882,776000;828001,828835;839301,840492;848726,849310;851048,852000;863818,864484;868917,869466;883059,883592;907337,908687;919666,920226;921205,921545;927640,927896;931485,932478;959740,961379;972001,972703;973484,974176;982567,983157;995021,995686;1003231,1004000;1031196,1031888;1058946,1060429;1066766,1067399;1082519,1083262;1083661,1085216;1122833,1123525;1141299,1142536;1148001,1148475;1149057,1150058;1157874,1158837;1223363,1224324;1244224,1245262;1258919,1259622;1278387,1279286;1296151,1296902;1297925,1298592;1303105,1304000;1344863,1346254;1346844,1347455;1378288,1380000;1380210,1380905;1398360,1398953;1413788,1415528;1430742,1431880;1439836,1440518;1441744,1442148;1447690,1448192;1448949,1449491;1455724,1457234;1480608,1481886;1496329,1498259;1503299,1504292;1520423,1521429;1568001,1568416;1573672,1574388;1581436,1582313;1586035,1586697;1587339,1587982;1592941,1593603;1601057,1602203;1603220,1604612;1607180,1607904;1613344,1614060;1614766,1615568;1619000,1619560;1637113,1637899;1651049,1652599;1704187,1705249;1706114,1706731;1707254,1708883;1716406,1716609;1721742,1722157;1727302,1728131;1730910,1732190;1742024,1742603;1750967,1753644;1833041,1833878;1835602,1836443;1866556,1867323;1870594,1871616;1873557,1874275;1914645,1916000;1921750,1922738;1936519,1937198;1938019,1938848;1939298,1939923;1952208,1952773;1957008,1957982;1989807,1990248;1992377,1993832;2005624,2007073;2027457,2027804;2029132,2029418;2037909,2038130;2041406,2041843;2052001,2052515;2055811,2056541;2068847,2069706;2077003,2077808];
+info.R1167M.FR1.session(2).badsegment = [59923,60574;63558,64259;69264,70353;74277,75329;102823,103434;127279,127974;140041,140469;143352,143708;165656,166595;194006,194872;196796,197321;227866,228426;262261,263082;326290,326686;393207,394528;396286,397297;409847,410939;434011,435772;463086,464000;467599,469173;497213,498318;508046,511313;535693,536462;542731,543452;543464,544739;580001,582189;589987,592945;595029,596000;628842,629840;640616,641133;646293,647020;685600,686654;687189,688501;691394,692094;701613,701974;709258,709829;724557,725550;727522,728055;733223,733601;750261,750853;752001,752561;760151,761310;764643,766106;777127,778127;806581,807243;828060,831995;832001,835990;836001,839998;840001,855998;856001,860000;940957,941894;990261,991638;1014148,1014660;1038067,1038590;1097304,1097824;1106930,1107807;1115905,1116544;1121645,1122168;1122869,1124147;1138997,1140902;1142895,1143396;1164041,1164953;1216001,1217700;1220001,1220649;1304001,1304399;1311371,1312212;1329422,1330205;1348001,1349012;1399360,1400948;1447118,1447458;1460001,1460512;1486406,1486987;1505089,1505947;1581997,1582662;1607836,1608403;1632952,1633012;1654379,1655022;1692001,1692558;1704256,1706160;1776734,1777310;1810737,1811420;1821799,1823014;1832780,1836000;1836288,1838958;1848208,1848875;1859519,1860319];
+
+% First cleaning, where I was relatively unaggressive in cleaning out big fluctuations.
+% info.R1167M.FR1.session(1).badsegment = [37142,37344;89033,89429;163129,163469;259250,259900;407368,408122;410755,411081;530291,530437;554512,555489;774886,776472;827947,828821;883069,883578;907727,908612;921239,921429;1082561,1083227;1083681,1085205;1223384,1224281;1345533,1346147;1430762,1431691;1496380,1497558;1607234,1607799;1651123,1652462;1707308,1708777;1866573,1867287;1870621,1871562;1873577,1874239;2037952,2038078];
+% info.R1167M.FR1.session(2).badsegment = [60001,60466;165698,166300;194025,194836;196835,197284;262307,263038;393231,394324;409884,410917;434073,435727;463097,464000;497222,498260;508763,511304;535722,536436;543769,544591;777198,778018;1038105,1038546;1139014,1140845;1164066,1164917;1215904,1217661;1303928,1304374;1348001,1348978;1399379,1400925;1447166,1447384;1654424,1654977;1704279,1706082;1821823,1822985];
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%% R1175N %%%%%% 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Notes:
+% FINISHED FINISHED
+
+% 'R1175N' - 1    - 34T  - 30F   - 68**/300  - 0.2267   - 30T  - 30F                          - ??? - Too few correct.
+
 % No Kahana electrode info available.
 % Lots of line noise, but baseline is pretty flat. Some additional, very small lines.
 % Fair amount of reference noise, goes away with re-referencing.
-% Some slinky channels, and some channels with sharp synchronous blips.
-% Overall, what I would consider a good subject.
+% Lots of slinky channels, and some channels with sharp synchronous blips.
+% Interictal spikes that will need to be removed.
+% Possible that too many trials will be removed.
+
+% Channel Info:
 info.R1175N.badchan.broken = {'RAT8', 'RPST2', 'RPST3', 'RPST4', 'RPT6'};
 info.R1175N.badchan.epileptic = {};
 
+% Line Spectra Info:
 info.R1175N.FR1.bsfilt.peak = [60 120.1 180.1 220 240 280 300.1 ... % Session 1/1 z-thresh 0.5
     159.9 216.9 259.9]; % manual
 info.R1175N.FR1.bsfilt.halfbandw = [0.6000 0.5000 1.1 0.5000 1.4 0.6000 3.80 ... % Session 1/1 z-thresh 0.5
     0.5 0.5 0.5]; % manual
+
+% Bad Segment Info:
+
 end
 
 
