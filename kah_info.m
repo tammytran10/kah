@@ -1,15 +1,50 @@
-% Load information about subjects in Project Kahana. 
-% Includes path, demographic, and channel, and artifact info. 
-% Surface channels are prioritized. So, depth channels may or may not be
-% noted as broken or epileptic. 
+function info = kah_info(varargin)
 
-function info = kah_info
+% kah_info() loads path, experiment, demographic, and electrode info for subjects in the RAM (Kahana) dataset.
+% Information about line spectra and epileptic channels and segments is hardcoded below for preprocessed subjects.
+% NOTE: artifact info is specific to experiment FR1 and surface channels only. Depth channels were not closely examined.
+% Depth channels may or may not be marked as broken.
+%
+% Usage:
+%   info = kah_info('all') returns information for all available subjects in the release specified below ('r1' currently).
+%   For this usage, TSCC cluster storage must be available.
+%
+%   info = kah_info() returns information for a subset of subjects, hardcoded below.
+%   For this usage, data from DATAHD (personal hard drive) is loaded if available, and from the cluster otherwise.
+
 warning off
 
 info = struct;
 
+% Subjects with age >= 18, fs >= 999, FR1, at least 3 T/F
+info.subj = {'R1020J' 'R1032D' 'R1033D' 'R1034D' 'R1045E' 'R1059J' 'R1075J' 'R1080E' 'R1120E' 'R1135E' ...
+    'R1142N' 'R1147P' 'R1149N' 'R1151E' 'R1154D' 'R1162N' 'R1166D' 'R1167M' 'R1175N'};
+    
+% Set path to where source files are.
+info.path.src = '/Users/Rogue/Documents/Research/Projects/KAH/src/';
+
 % Set path to Kahana folder on shared VoytekLab server.
-info.path.kah = '/Volumes/voyteklab/common/data2/kahana_ecog_RAMphase1/';
+hdpath = '/Volumes/DATAHD/KAHANA/';
+clusterpath = '/Volumes/voyteklab/common/data2/kahana_ecog_RAMphase1/';
+
+% Use the cluster path if info for all subjects is desired.
+if nargin > 0 && strcmpi(varargin{1}, 'all')
+    if exist(clusterpath, 'dir')
+        info.path.kah = clusterpath;
+    else
+        error('To load info for all subjects, cluster storage must be available.')
+    end
+    
+% Otherwise, use personal hard drive if available, cluster path otherwise.
+else    
+    if exist(hdpath, 'dir')
+        info.path.kah = hdpath;
+    elseif exist(clusterpath, 'dir')
+        info.path.kah = clusterpath;
+    else
+        error('Neither your personal hard drive nor cluster storage is available.')
+    end
+end
 
 % Set path to .csv file with demographic information.
 info.path.demfile = [info.path.kah 'Release_Metadata_20160930/RAM_subject_demographics.csv'];
@@ -23,28 +58,25 @@ info.path.exp = [info.path.kah 'session_data/experiment_data/protocols/' info.re
 % Set path to anatomical data.
 info.path.surf = [info.path.kah 'session_data/surfaces/'];
 
-% Get all subject identifiers.
-info.subj = dir(info.path.exp);
-info.subj = {info.subj.name};
-info.subj(contains(info.subj, '.')) = [];
+% Set path to where processed data will be saved.
+info.path.processed.hd      = '/Volumes/DATAHD/Active/KAH/';
+info.path.processed.cluster = '/Volumes/voyteklab/tamtra/KAH/';
 
 % Get info from demographic file.
 demfile = fopen(info.path.demfile);
 deminfo = textscan(demfile, '%s %s %f %s %s %s %s %s %s %s %s %s', 'delimiter', ',', 'headerlines', 1);
 fclose(demfile);
 
-% OPTIONAL:
-
-% % Subjects with >= age 18, sampling rate >= 999 Hz, temporal & frontal grids, FR1 task, > 20 correct trials, and relatively clean data
-% info.subj = {'R1032D', 'R1128E', 'R1034D', 'R1167M', 'R1142N', 'R1059J', 'R1020J', 'R1045E'};
-
-% Subjects with age >= 18, fs >= 999, FR1, at least 3 T/F
-info.subj = {'R1020J' 'R1032D' 'R1033D' 'R1034D' 'R1045E' 'R1059J' 'R1075J' 'R1080E' 'R1120E' 'R1128E' 'R1135E' ...
-    'R1142N' 'R1147P' 'R1149N' 'R1151E' 'R1154D' 'R1162N' 'R1166D' 'R1167M' 'R1175N'};
+% Get all subject identifiers, if desired. Overrides any hardcoded subjects above.
+if nargin > 0 && strcmpi(varargin{1}, 'all')
+    info.subj = extractfield(dir(info.path.exp), 'name');
+    info.subj(contains(info.subj, '.')) = [];
+end
 
 % Get gender, ages, and handedness of all subjects.
 [info.gender, info.hand] = deal(cell(size(info.subj)));
 info.age = nan(size(info.subj));
+info.subj = info.subj(:); info.gender = info.gender(:); info.hand = info.hand(:); info.age = info.age(:); 
 
 for isubj = 1:numel(info.subj)
     info.gender(isubj) = deminfo{2}(strcmpi(info.subj{isubj}, deminfo{1}));
@@ -52,46 +84,50 @@ for isubj = 1:numel(info.subj)
     info.hand(isubj) = deminfo{12}(strcmpi(info.subj{isubj}, deminfo{1}));
 end
 
-% Load anatomical atlases.
-talatlas = ft_read_atlas('TTatlas+tlrc.HEAD');
-mniatlas = ft_read_atlas('ROI_MNI_V4.nii');
+% Load anatomical atlases used for electrode region labelling.
+talatlas = ft_read_atlas([info.path.src 'atlasread/TTatlas+tlrc.HEAD']);
+mniatlas = ft_read_atlas([info.path.src 'atlasread/ROI_MNI_V4.nii']);
 
 % For each subject, extract anatomical, channel, and electrophysiological info.
 for isubj = 1:numel(info.subj)
     
     % Get current subject identifier.
-    subjcurr = info.subj{isubj};
-    disp([num2str(isubj) ' ' subjcurr])
+    subject = info.subj{isubj};
+    disp([num2str(isubj) ' ' subject])
 
     % Get path for left- and right-hemisphere pial surf files.
-    info.(subjcurr).lsurffile = [info.path.surf subjcurr '/surf/lh.pial'];
-    info.(subjcurr).rsurffile = [info.path.surf subjcurr '/surf/rh.pial'];
+    info.(subject).lsurffile = [info.path.surf subject '/surf/lh.pial'];
+    info.(subject).rsurffile = [info.path.surf subject '/surf/rh.pial'];
     
+    % Load cortical mesh for subject.
+    info.(subject).mesh = ft_read_headshape({info.(subject).lsurffile, info.(subject).rsurffile});
+
     % Get experiment-data path for current subject.
-    subjpathcurr = [info.path.exp subjcurr '/'];
+    subjpathcurr = [info.path.exp subject '/'];
         
     % Get subject age.
-    info.(subjcurr).age = info.age(isubj);
+    info.(subject).age = info.age(isubj);
     
     % Get path for contacts.json and get all contact information.
-    info.(subjcurr).contactsfile = [subjpathcurr 'localizations/0/montages/0/neuroradiology/current_processed/contacts.json'];
-    contacts = loadjson(info.(subjcurr).contactsfile);
-    contacts = contacts.(subjcurr).contacts;
+    info.(subject).contactsfile = [subjpathcurr 'localizations/0/montages/0/neuroradiology/current_processed/contacts.json'];
+    contacts = loadjson(info.(subject).contactsfile);
+    contacts = contacts.(subject).contacts;
     
     % Get labels for all channels.
-    info.(subjcurr).allchan.label = fieldnames(contacts);
+    info.(subject).allchan.label = fieldnames(contacts);
     
-    % For each channel...
-    for ichan = 1:length(info.(subjcurr).allchan.label)
-        chancurr = contacts.(info.(subjcurr).allchan.label{ichan});
+    % Get info for each channel.
+    for ichan = 1:length(info.(subject).allchan.label)
+        % Get current channel. 
+        chancurr = contacts.(info.(subject).allchan.label{ichan});
         
-        % ...get channel type (grid, strip, depth)...
-        info.(subjcurr).allchan.type{ichan} = chancurr.type;
+        % Get channel type (grid, strip, depth).
+        info.(subject).allchan.type{ichan} = chancurr.type;
         
-        % and region labels and xyz coordinates per atlas.
+        % Get atlas-specific information.
         atlases = {'avg', 'avg_0x2E_dural', 'ind', 'ind_0x2E_dural', 'mni', 'tal', 'vox'};
         for iatlas = 1:length(atlases)
-             % Get current atlas info for the channel.
+            % Get current atlas info for the channel.
             try
                 atlascurr = chancurr.atlases.(atlases{iatlas});
             catch
@@ -102,7 +138,7 @@ for isubj = 1:numel(info.subj)
             if isempty(atlascurr.region)
                 atlascurr.region = 'NA'; % if no region label is given in this atlas. For MNI and TAL, this will be filled in later.
             end
-            info.(subjcurr).allchan.(atlases{iatlas}).region{ichan} = atlascurr.region;
+            info.(subject).allchan.(atlases{iatlas}).region{ichan} = atlascurr.region;
             
             % Convert xyz coordinates to double, if necessary (due to NaNs in coordinates).
             coords = {'x', 'y', 'z'};
@@ -113,74 +149,91 @@ for isubj = 1:numel(info.subj)
             end
             
             % Extract xyz coordinates.
-            info.(subjcurr).allchan.(atlases{iatlas}).xyz(ichan,:) = [atlascurr.x, atlascurr.y, atlascurr.z];
+            info.(subject).allchan.(atlases{iatlas}).xyz(ichan,:) = [atlascurr.x, atlascurr.y, atlascurr.z];
         end
         
         % Get top anatomical label from MNI atlas.
         try
-            mnilabel = lower(atlas_lookup(mniatlas, info.(subjcurr).allchan.mni.xyz(ichan,:), 'inputcoord', 'mni', 'queryrange', 3));
+            mnilabel = lower(atlas_lookup(mniatlas, info.(subject).allchan.mni.xyz(ichan,:), 'inputcoord', 'mni', 'queryrange', 3));
             mnilabel = mnilabel{1};
         catch
             mnilabel = 'NA'; % if no label or atlas was found.
         end
-        info.(subjcurr).allchan.mni.region{ichan} = mnilabel;
+        info.(subject).allchan.mni.region{ichan} = mnilabel;
         
         % Get top anatomical label from TAL atlas.
         try
-            tallabel = lower(atlas_lookup(talatlas, info.(subjcurr).allchan.tal.xyz(ichan,:), 'inputcoord', 'tal', 'queryrange', 3));
+            tallabel = lower(atlas_lookup(talatlas, info.(subject).allchan.tal.xyz(ichan,:), 'inputcoord', 'tal', 'queryrange', 3));
             tallabel = tallabel{1};
         catch
             tallabel = 'NA'; % if no label or atlas was found.
         end
-        info.(subjcurr).allchan.tal.region{ichan} = tallabel;
+        info.(subject).allchan.tal.region{ichan} = tallabel;
         
         % Get average anatomical annotations from Kahana group.
-        avglabel = lower(info.(subjcurr).allchan.avg.region{ichan});
+        avglabel = lower(info.(subject).allchan.avg.region{ichan});
         
         % Get individual anatomical annotations from Kahana group.
-        indlabel = lower(info.(subjcurr).allchan.ind.region{ichan});
+        indlabel = lower(info.(subject).allchan.ind.region{ichan});
         
-        % Get labels corresponding to particular lobes.
-        regions = {mnilabel, tallabel, indlabel};
-        frontal = contains(regions, {'frontal', 'opercularis', 'triangularis', 'precentral', 'rectal', 'rectus', 'orbital'});
-        temporal = contains(regions, {'temporal', 'fusiform'});
+        % Set terms to search for in region labels.
+        frontalterms = {'frontal', 'opercularis', 'triangularis', 'precentral', 'rectal', 'rectus', 'orbital'};
+        temporalterms = {'temporal', 'fusiform', 'hippocamp', 'bankssts', 'entorhinal'};
+        
+        % Determine lobe location based on individual labels only.
+        frontal = contains(indlabel, frontalterms);
+        temporal = contains(indlabel, temporalterms);
+        
+        if frontal
+            info.(subject).allchan.lobe{ichan} = 'F';
+        elseif temporal
+            info.(subject).allchan.lobe{ichan} = 'T';
+        else
+            info.(subject).allchan.lobe{ichan} = 'NA';
+        end
+        
+        % Determine lobe location based on majority vote across individual, MNI, and TAL.
+        regions = {indlabel, mnilabel, tallabel};
+        frontal = contains(regions, frontalterms);
+        temporal = contains(regions, temporalterms);
         nolabel = strcmpi('NA', regions);
         
-        % Determine lobe location based on majority vote across three labels.
         if sum(frontal) > (sum(~nolabel)/2)
-            info.(subjcurr).allchan.lobe{ichan} = 'F';
+            info.(subject).allchan.altlobe{ichan} = 'F';
         elseif sum(temporal) > (sum(~nolabel)/2)
-            info.(subjcurr).allchan.lobe{ichan} = 'T';
+            info.(subject).allchan.altlobe{ichan} = 'T';
         else
-            info.(subjcurr).allchan.lobe{ichan} = 'NA';
+            info.(subject).allchan.altlobe{ichan} = 'NA';
         end
     end
-    info.(subjcurr).allchan.type = info.(subjcurr).allchan.type(:);
-    info.(subjcurr).allchan.lobe = info.(subjcurr).allchan.lobe(:);
+    
+    % Re-format to column vectors.
+    info.(subject).allchan.type = info.(subject).allchan.type(:);
+    info.(subject).allchan.lobe = info.(subject).allchan.lobe(:);
+    info.(subject).allchan.altlobe = info.(subject).allchan.altlobe(:);
     for iatlas = 1:length(atlases)
-        info.(subjcurr).allchan.(atlases{iatlas}).region = info.(subjcurr).allchan.(atlases{iatlas}).region(:);
+        info.(subject).allchan.(atlases{iatlas}).region = info.(subject).allchan.(atlases{iatlas}).region(:);
     end
     
     % Get experiments performed.
     experiments = extractfield(dir([subjpathcurr 'experiments/']), 'name');
     experiments(contains(experiments, '.')) = [];
     
-    % For each experiment...
+    % Get experiment path info.
     for iexp = 1:numel(experiments)
+        % Get current experiment path.
         expcurr = experiments{iexp};
-        
-        % ...get subject experiment path, ...
         exppathcurr = [subjpathcurr 'experiments/' expcurr '/sessions/'];
         
-        % ...get session numbers, ...
+        % Get session numbers.
         sessions = extractfield(dir(exppathcurr), 'name');
         sessions(contains(sessions, '.')) = [];
         
-        % ...and get header file, data directory, and event file per session.
+        % Get header file, data directory, and event file per session.
         for isess = 1:numel(sessions)
-            info.(subjcurr).(expcurr).session(isess).headerfile = [exppathcurr sessions{isess} '/behavioral/current_processed/index.json'];
-            info.(subjcurr).(expcurr).session(isess).datadir    = [exppathcurr sessions{isess} '/ephys/current_processed/noreref/'];
-            info.(subjcurr).(expcurr).session(isess).eventfile  = [exppathcurr sessions{isess} '/behavioral/current_processed/task_events.json'];
+            info.(subject).(expcurr).session(isess).headerfile = [exppathcurr sessions{isess} '/behavioral/current_processed/index.json'];
+            info.(subject).(expcurr).session(isess).datadir    = [exppathcurr sessions{isess} '/ephys/current_processed/noreref/'];
+            info.(subject).(expcurr).session(isess).eventfile  = [exppathcurr sessions{isess} '/behavioral/current_processed/task_events.json'];
         end
     end
     
@@ -189,21 +242,19 @@ for isubj = 1:numel(info.subj)
     try
         sources = loadjson(sourcesfile);
     catch
-        info.(subjcurr).fs = 0; % if sources file not found.
+        info.(subject).fs = 0; % if sources file not found.
         continue
     end
     sourcesfield = fieldnames(sources);
-    info.(subjcurr).fs = sources.(sourcesfield{1}).sample_rate;
+    info.(subject).fs = sources.(sourcesfield{1}).sample_rate;
 end
-
-% Remove sessions with problems.
-% info.R1156D.FR1.session(4) = [];
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % >= 3 T/F channels
 % clean line spectra 80-150Hz
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %  Subject - Sess - Temp - Front - Corr./All - Acc.     - Temp - Front - Corr./All - Acc.     - BAD - Notes
+
 % 'R1020J' - 1    - 29T  - 32F   - 114/300   - 0.3800   - 17T  - 23F   - 104/283   - 0.3675   - :)  - Done. Core. 48.
 
 % 'R1032D' - 1    - 14T  - 11F   - 95/300    - 0.3167   - 8T   - 11F   - 79/231    - 0.34199  - :)  - Done. 19.
@@ -250,10 +301,10 @@ end
 
 % 'R1149N' - 1    - 39T  - 16F   - 64/300    - 0.2133   - 29T  - 16F   - 47/248    - 0.18952  - ??? - Done. Expansion. 67 recall.
 
-% 'R1151E' - 3    - 7T   - 5F    - 208/756   - 0.2751   - 7T   - 5F    -  202/742  - 0.2722   - :)  - Good pending cleaning. Core.
-% 'R1151E' - 1/3  - 7T   - 5F    - 77/300    - 0.2567   - 7T   - 5F    -  76/294   - 0.2585   - :)  - 
-% 'R1151E' - 2/3  - 7T   - 5F    - 83/300    - 0.2767   - 7T   - 5F    -  81/296   - 0.2736   - :)  - 
-% 'R1151E' - 3/3  - 7T   - 5F    - 48/156    - 0.3077   - 7T   - 5F    -  45/152   - 0.2961   - :)  -
+% 'R1151E' - 3    - 7T   - 5F    - 208/756   - 0.2751   - 7T   - 5F    - 202/742   - 0.2722   - :)  - Good pending cleaning. Core.
+% 'R1151E' - 1/3  - 7T   - 5F    - 77/300    - 0.2567   - 7T   - 5F    - 76/294    - 0.2585   - :)  - 
+% 'R1151E' - 2/3  - 7T   - 5F    - 83/300    - 0.2767   - 7T   - 5F    - 81/296    - 0.2736   - :)  - 
+% 'R1151E' - 3/3  - 7T   - 5F    - 48/156    - 0.3077   - 7T   - 5F    - 45/152    - 0.2961   - :)  -
 
 % 'R1154D' - 3    - 39T  - 20F   - 271/900   - 0.3011   - 9T   - 19F   - 253/841   - 0.3008   - :)  -  Core.
 % 'R1154D' - 1/3  - 39T  - 20F   - 63/300    - 0.2100   - 9T   - 19F   - 63/300    - 0.2100   - :)  - 
@@ -869,6 +920,7 @@ info.R1142N.refchan = {'all'};
 % Session 1/1 eyeballing
 info.R1142N.FR1.bsfilt.peak      = [60  120 180 240 300];
 info.R1142N.FR1.bsfilt.halfbandw = [0.5 0.5 0.5 0.5 0.5];
+info.R1142N.FR1.bsfilt.edge = 3.1840;
 
 % Bad Segment Info:
 info.R1142N.FR1.session(1).badsegment = [1,1915;2978,3154;6479,7036;7459,7503;15373,15544;16498,17176;20396,21061;23583,23995;25506,26211;29605,30170;32562,33144;33417,33998;35838,35877;36151,36762;38320,39641;44001,44776;45968,46098;46986,47041;48001,48703;50210,50275;50938,51401;53054,53566;54376,55014;57495,58176;58629,59114;60122,60381;61903,62630;63349,64137;64458,64502;66374,66437;74591,75168;81675,81722;82156,82219;82250,82281;82629,82665;83172,83235;83855,83904;83981,84016;84605,84631;85033,85066;86548,86638;87802,88711;88955,88996;89516,89558;91976,92004;92535,92596;92828,92889;103419,104000;104186,104227;104802,104840;105183,105254;105339,105450;105530,105558;109885,110514;112261,112287;112640,112674;112707,112746;115328,115439;118556,118582;119072,119103;120933,121587;122605,122630;122750,122778;122882,122998;123336,123369;125143,125187;130180,130213;130608,130649;130718,130759;133465,133499;133605,134281;134565,134622;135349,135399;136001,137079;137404,137439;137793,137883;139906,139950;142218,142867;159712,159772;160001,160749;161562,162047;162280,162342;162403,162482;162661,162781;162852,162896;163223,163920;165025,165544;165559,165611;167782,168518;169425,170047;170680,171718;172001,173184;173793,174953;175508,177219;177734,178058;180001,197372;198927,200000;202540,215995;216001,232000;233000,236000;240525,240905;241557,241888;242731,243254;244001,244321;244323,249982;252057,252101;253428,253482;254680,254719;255140,255176;255717,255864;256135,256988;258586,259853;261782,262713;264624,265246;266651,266695;268850,269370;270046,270084;270532,270969;272275,272692;273331,273372;278573,278619;280267,280754;284001,284504;285484,285512;286180,286222;287099,287143;287309,287393;288780,288819;291787,291837;297928,298587;312952,313840;314470,314850;315615,315659;316226,317047;318137,318313;318978,319643;320052,320719;321559,321601;333694,333719;334199,334375;334438,334471;334890,334928;335551,336000;336323,336800;345495,346168;347148,347705;372092,372735;376001,376574;377551,377571;380001,380980;383083,383122;384170,384803;386796,386834;389839,390434;392619,393577;398532,400000;418532,419073;420001,420571;432952,433509;433573,433603;437917,438547;439314,440000;442667,443383;450556,451079;457831,458283;459699,460287;468001,469512;478309,479374;480001,480641;481430,482380;485140,486160;490922,491538;510836,511458;514100,514160;515301,516000;518866,520000;522264,523667;525648,525711;530968,531452;536885,537644;541895,542297;545879,546488;576901,577574;587341,587377;602935,602966;616140,616768;632001,632663;648718,649241;652363,652545;659137,659826;669398,669896;670556,670939;674796,675213;705288,705802;707771,708000;709054,709547;712001,712383;712705,712760;734497,734912;737390,738101;742341,743087;747091,747692;748291,749104;761995,762727;789191,789792;822952,824000;832001,832582;834393,835606;836401,837015;838387,838936;855519,855987;857745,858222;858857,859423;892130,892905;901189,901945;915527,916000;918067,918600;920896,920964;929146,929633;932221,932800;934414,935108;948726,949241;968511,969149;972949,973364;1000474,1000966;1002382,1002842;1005796,1007049;1017019,1018246;1025008,1025910;1032879,1033534;1035505,1035915;1037519,1039211;1048425,1049023;1053245,1054076;1057522,1057998;1060154,1060214;1065968,1066633;1071134,1071557;1072487,1073265;1077911,1078469;1091188,1091305;1101893,1102466;1127602,1128000;1130195,1130698;1131678,1132310;1133393,1134032;1136342,1136860;1137068,1137754;1143616,1144780;1153202,1153829;1159075,1159761;1167376,1168000;1175513,1176000;1193116,1193813;1230852,1231630;1248272,1248840;1254274,1255197;1266855,1267721;1286624,1287151;1294847,1296000;1313070,1313783;1332001,1332510;1376581,1377343;1380054,1380596;1393847,1394504;1397162,1397877;1410396,1411138;1429003,1429617;1441113,1441708;1477549,1478630;1509035,1509544;1514003,1514547;1527468,1528000;1535659,1536257;1547263,1547737;1549368,1550114;1576001,1576590;1584001,1584913;1588699,1589302;1592646,1593421;1595355,1596101;1598823,1599731;1604296,1604800;1614307,1614832;1622113,1622784;1629960,1630590;1642312,1642721;1707301,1707864;1712888,1713659;1716159,1716692;1745884,1746582;1749819,1750679;1771218,1771619;1819505,1820000;1835255,1836000;1855266,1856000;1860885,1861558;1863653,1864000;1865988,1866888;1880269,1880864;1891834,1892628;1901237,1901848;1925988,1927586;1961106,1962788;1964659,1965235;1975700,1976268;1981775,1982546;1985301,1985802;2027149,2027937;2031864,2032640;2066791,2068485;2095193,2095979;2099331,2100579;2108052,2108437;2116848,2119009;2121581,2122449;2144724,2145184;2179069,2179767;2192001,2192812;2236461,2237292;2252449,2253052;2255307,2256389;2262427,2263036;2264001,2264667;2266226,2266824;2306785,2307404;2312398,2312907;2336987,2337515;2344311,2345026;2351296,2352518;2355654,2356188;2371766,2372433;2385009,2386413;2387567,2388000;2406914,2407356;2429782,2430345;2432759,2433469;2443825,2444716;2449178,2449759;2450237,2450885;2456001,2456808;2527072,2527571;2554710,2555533;2557702,2564000;2568001,2568708;2584066,2586239;2606444,2607006;2620573,2621141;2669646,2671187;2673086,2673727;2676251,2676932;2724001,2724448;2752995,2753566;2754621,2755149;2772001,2772848;2785809,2787033;2793807,2794369;2816569,2820000;2852324,2852941;2873785,2874380;2932291,2932867;2946527,2949077;2955790,2956611;2966100,2967340;2972001,2972657;2981253,2981843;2985116,2985902;3000304,3000843;3005503,3006144;3018073,3018872;3020748,3021310;3035046,3037259;3047132,3047767;3056001,3056499;3060001,3061052;3068490,3069036;3107661,3109211;3196589,3196918;3197328,3197835;3204001,3204674;3221121,3221687;3233718,3234380;3239207,3240000;3254208,3261587;3280576,3281101;3288505,3289240;3300850,3301507;3313033,3313776;3355807,3356511;3364271,3365042;3365404,3366110;3408904,3409719;3435929,3436469;3456001,3456598;3468670,3469417;3471367,3472000;3474538,3475181;3478738,3479312;3497589,3498856;3547295,3548000;3600719,3601631;3619841,3620191;3621440,3622268;3671296,3671780;3673605,3682800;3686745,3687240;3688643,3689101;3696001,3696434;3705561,3706610;3754239,3755364;3764057,3764706;3765127,3765730;3767244,3767791;3769654,3770763;3784190,3785002;3793215,3793757;3812815,3813643;3828108,3828633;3861283,3861942;3894694,3895388;3911081,3911767;3965315,3965981;4004296,4004948;4013213,4013797;4021011,4021746;4024997,4025796;4026787,4027469;4034831,4035457;4036614,4038679;4062667,4063254;4118368,4118842;4121597,4122149;4123340,4124357;4174954,4175466;4176651,4177257;4200070,4201054;4209129,4209679;4212440,4213082;4227745,4228411;4234680,4235245];
@@ -1012,6 +1064,7 @@ info.R1151E.FR1.bsfilt.peak      = [60  180 210.2 215 220.1 300 ...
     100 120 123.7 139.9 239.9 247.3 260];
 info.R1151E.FR1.bsfilt.halfbandw = [0.5 0.5 0.5   0.5 0.5   0.5 ...
     0.5 0.5 0.5   0.5   0.5   0.5   0.5];
+info.R1151E.FR1.bsfilt.edge = 3.1840;
 
 % Bad Segment Info:
 info.R1151E.FR1.session(1).badsegment = [1158351,1158997;1187480,1188000;2215746,2216458;2442105,2445397;2804473,2804651;2821460,2822175;2936114,2936732;2984501,2984957;3211246,3211896;3236166,3236542;3326883,3326993];
@@ -1073,6 +1126,7 @@ info.R1154D.FR1.bsfilt.halfbandw = [0.5 0.5 0.5  0.5   0.5 0.5 0.5   0.7 2.5   0
     0.5  0.5 0.5 0.5   0.5 ...
     0.5 ...
     ]; % 0.5 0.5];
+info.R1154D.FR1.bsfilt.edge = 3.1840;
 
 % Bad Segment Info:
 info.R1154D.FR1.session(1).badsegment = [492223,495142;2129384,2131856;2332001,2334453;2639109,2642489];
@@ -1112,10 +1166,12 @@ info.R1162N.FR1.bsfilt.peak      = [60  120 180 239.5 300 ... % Session 1/1 z-th
     220]; % manual, tiny tiny peak
 info.R1162N.FR1.bsfilt.halfbandw = [0.5 0.5 0.5 0.5   0.6 ...
     0.5]; % manual, tiny tiny peak
+info.R1162N.FR1.bsfilt.edge = 3.1840;
 
 % Bad Segment Info:
 info.R1162N.FR1.session(1).badsegment = [665485,666054;671935,672472;684932,685498;801243,801659;882766,883167;929392,930578;966887,967247;1047569,1048000;1075238,1075578;1152001,1153074;1163605,1164000;1285791,1286376;1661231,1661727;1671311,1672599;1677069,1677776;1717089,1717699;1741283,1741744;1910355,1911005;1958609,1959223;1960928,1961530;1962738,1964000;2106226,2106707;2127077,2127550;2142617,2143820;2151238,2151876;2419129,2419687;2432590,2433361;2446666,2447263;2584763,2586054;2587617,2588000;2709489,2710042;2712541,2713086];
 info.R1162N.FR1.session(1).jumps = [561726,561768;742081,742792;1422621,1422711;1541863,1543868;1789343,1790780;2755012,2755759;2822920,2823513];
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%% R1166D %%%%%% 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1170,8 +1226,8 @@ info.R1166D.FR1.session(3).jumps = [315069,315118;636186,636224;908831,908889;17
 % FINISHED FINISHED
 
 % 'R1167M' - 2    - 39T  - 20F   - 166/372   - 0.4462   - 29T  - 18F   - 133/285   - 0.4508 - :)  - Done. Core. 33. Flat slope. 
-% 'R1167M' - 1/2    - 39T  - 20F   - 80/192   - 0.4167   - 29T  - 18F   - 54/127 - 0.4252    - :)  - 
-% 'R1167M' - 2/2    - 39T  - 20F   - 86/180   - 0.4778   - 29T  - 18F   - 79/158 - 0.5    - :)  - 
+% 'R1167M' - 1/2    - 39T  - 20F   - 80/192   - 0.4167  - 29T  - 18F   - 54/127 - 0.4252    - :)  - 
+% 'R1167M' - 2/2    - 39T  - 20F   - 86/180   - 0.4778  - 29T  - 18F   - 79/158 - 0.5    - :)  - 
 
 % Line detection on re-ref. Quite a few little line spectra 80-150Hz. 
 % LPT channels were wonky, so careful if they are the ones showing the effects.
