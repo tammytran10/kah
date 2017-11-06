@@ -1,15 +1,50 @@
-% Load information about subjects in Project Kahana. 
-% Includes path, demographic, and channel, and artifact info. 
-% Surface channels are prioritized. So, depth channels may or may not be
-% noted as broken or epileptic. 
+function info = kah_info(varargin)
 
-function info = kah_info
+% kah_info() loads path, experiment, demographic, and electrode info for subjects in the RAM (Kahana) dataset.
+% Information about line spectra and epileptic channels and segments is hardcoded below for preprocessed subjects.
+% NOTE: artifact info is specific to experiment FR1 and surface channels only. Depth channels were not closely examined.
+% Depth channels may or may not be marked as broken.
+%
+% Usage:
+%   info = kah_info('all') returns information for all available subjects in the release specified below ('r1' currently).
+%   For this usage, TSCC cluster storage must be available.
+%
+%   info = kah_info() returns information for a subset of subjects, hardcoded below.
+%   For this usage, data from DATAHD (personal hard drive) is loaded if available, and from the cluster otherwise.
+
 warning off
 
 info = struct;
 
+% Subjects with age >= 18, fs >= 999, FR1, at least 3 T/F
+info.subj = {'R1020J' 'R1032D' 'R1033D' 'R1034D' 'R1045E' 'R1059J' 'R1075J' 'R1080E' 'R1120E' 'R1135E' ...
+    'R1142N' 'R1147P' 'R1149N' 'R1151E' 'R1154D' 'R1162N' 'R1166D' 'R1167M' 'R1175N'};
+    
+% Set path to where source files are.
+info.path.src = '/Users/Rogue/Documents/Research/Projects/KAH/src/';
+
 % Set path to Kahana folder on shared VoytekLab server.
-info.path.kah = '/Volumes/voyteklab/common/data2/kahana_ecog_RAMphase1/';
+hdpath = '/Volumes/DATAHD/KAHANA/';
+clusterpath = '/Volumes/voyteklab/common/data2/kahana_ecog_RAMphase1/';
+
+% Use the cluster path if info for all subjects is desired.
+if nargin > 0 && strcmpi(varargin{1}, 'all')
+    if exist(clusterpath, 'dir')
+        info.path.kah = clusterpath;
+    else
+        error('To load info for all subjects, cluster storage must be available.')
+    end
+    
+% Otherwise, use personal hard drive if available, cluster path otherwise.
+else    
+    if exist(hdpath, 'dir')
+        info.path.kah = hdpath;
+    elseif exist(clusterpath, 'dir')
+        info.path.kah = clusterpath;
+    else
+        error('Neither your personal hard drive nor cluster storage is available.')
+    end
+end
 
 % Set path to .csv file with demographic information.
 info.path.demfile = [info.path.kah 'Release_Metadata_20160930/RAM_subject_demographics.csv'];
@@ -23,28 +58,25 @@ info.path.exp = [info.path.kah 'session_data/experiment_data/protocols/' info.re
 % Set path to anatomical data.
 info.path.surf = [info.path.kah 'session_data/surfaces/'];
 
-% Get all subject identifiers.
-info.subj = dir(info.path.exp);
-info.subj = {info.subj.name};
-info.subj(contains(info.subj, '.')) = [];
+% Set path to where processed data will be saved.
+info.path.processed.hd      = '/Volumes/DATAHD/Active/KAH/';
+info.path.processed.cluster = '/Volumes/voyteklab/tamtra/KAH/';
 
 % Get info from demographic file.
 demfile = fopen(info.path.demfile);
 deminfo = textscan(demfile, '%s %s %f %s %s %s %s %s %s %s %s %s', 'delimiter', ',', 'headerlines', 1);
 fclose(demfile);
 
-% OPTIONAL:
-
-% % Subjects with >= age 18, sampling rate >= 999 Hz, temporal & frontal grids, FR1 task, > 20 correct trials, and relatively clean data
-% info.subj = {'R1032D', 'R1128E', 'R1034D', 'R1167M', 'R1142N', 'R1059J', 'R1020J', 'R1045E'};
-
-% Subjects with age >= 18, fs >= 999, FR1, at least 3 T/F
-info.subj = {'R1020J' 'R1032D' 'R1033D' 'R1034D' 'R1045E' 'R1059J' 'R1075J' 'R1080E' 'R1120E' 'R1128E' 'R1135E' ...
-    'R1142N' 'R1147P' 'R1149N' 'R1151E' 'R1154D' 'R1162N' 'R1166D' 'R1167M' 'R1175N'};
+% Get all subject identifiers, if desired. Overrides any hardcoded subjects above.
+if nargin > 0 && strcmpi(varargin{1}, 'all')
+    info.subj = extractfield(dir(info.path.exp), 'name');
+    info.subj(contains(info.subj, '.')) = [];
+end
 
 % Get gender, ages, and handedness of all subjects.
 [info.gender, info.hand] = deal(cell(size(info.subj)));
 info.age = nan(size(info.subj));
+info.subj = info.subj(:); info.gender = info.gender(:); info.hand = info.hand(:); info.age = info.age(:); 
 
 for isubj = 1:numel(info.subj)
     info.gender(isubj) = deminfo{2}(strcmpi(info.subj{isubj}, deminfo{1}));
@@ -52,46 +84,50 @@ for isubj = 1:numel(info.subj)
     info.hand(isubj) = deminfo{12}(strcmpi(info.subj{isubj}, deminfo{1}));
 end
 
-% Load anatomical atlases.
-talatlas = ft_read_atlas('TTatlas+tlrc.HEAD');
-mniatlas = ft_read_atlas('ROI_MNI_V4.nii');
+% Load anatomical atlases used for electrode region labelling.
+talatlas = ft_read_atlas([info.path.src 'atlasread/TTatlas+tlrc.HEAD']);
+mniatlas = ft_read_atlas([info.path.src 'atlasread/ROI_MNI_V4.nii']);
 
 % For each subject, extract anatomical, channel, and electrophysiological info.
 for isubj = 1:numel(info.subj)
     
     % Get current subject identifier.
-    subjcurr = info.subj{isubj};
-    disp([num2str(isubj) ' ' subjcurr])
+    subject = info.subj{isubj};
+    disp([num2str(isubj) ' ' subject])
 
     % Get path for left- and right-hemisphere pial surf files.
-    info.(subjcurr).lsurffile = [info.path.surf subjcurr '/surf/lh.pial'];
-    info.(subjcurr).rsurffile = [info.path.surf subjcurr '/surf/rh.pial'];
+    info.(subject).lsurffile = [info.path.surf subject '/surf/lh.pial'];
+    info.(subject).rsurffile = [info.path.surf subject '/surf/rh.pial'];
     
+    % Load cortical mesh for subject.
+    info.(subject).mesh = ft_read_headshape({info.(subject).lsurffile, info.(subject).rsurffile});
+
     % Get experiment-data path for current subject.
-    subjpathcurr = [info.path.exp subjcurr '/'];
+    subjpathcurr = [info.path.exp subject '/'];
         
     % Get subject age.
-    info.(subjcurr).age = info.age(isubj);
+    info.(subject).age = info.age(isubj);
     
     % Get path for contacts.json and get all contact information.
-    info.(subjcurr).contactsfile = [subjpathcurr 'localizations/0/montages/0/neuroradiology/current_processed/contacts.json'];
-    contacts = loadjson(info.(subjcurr).contactsfile);
-    contacts = contacts.(subjcurr).contacts;
+    info.(subject).contactsfile = [subjpathcurr 'localizations/0/montages/0/neuroradiology/current_processed/contacts.json'];
+    contacts = loadjson(info.(subject).contactsfile);
+    contacts = contacts.(subject).contacts;
     
     % Get labels for all channels.
-    info.(subjcurr).allchan.label = fieldnames(contacts);
+    info.(subject).allchan.label = fieldnames(contacts);
     
-    % For each channel...
-    for ichan = 1:length(info.(subjcurr).allchan.label)
-        chancurr = contacts.(info.(subjcurr).allchan.label{ichan});
+    % Get info for each channel.
+    for ichan = 1:length(info.(subject).allchan.label)
+        % Get current channel. 
+        chancurr = contacts.(info.(subject).allchan.label{ichan});
         
-        % ...get channel type (grid, strip, depth)...
-        info.(subjcurr).allchan.type{ichan} = chancurr.type;
+        % Get channel type (grid, strip, depth).
+        info.(subject).allchan.type{ichan} = chancurr.type;
         
-        % and region labels and xyz coordinates per atlas.
+        % Get atlas-specific information.
         atlases = {'avg', 'avg_0x2E_dural', 'ind', 'ind_0x2E_dural', 'mni', 'tal', 'vox'};
         for iatlas = 1:length(atlases)
-             % Get current atlas info for the channel.
+            % Get current atlas info for the channel.
             try
                 atlascurr = chancurr.atlases.(atlases{iatlas});
             catch
@@ -102,7 +138,7 @@ for isubj = 1:numel(info.subj)
             if isempty(atlascurr.region)
                 atlascurr.region = 'NA'; % if no region label is given in this atlas. For MNI and TAL, this will be filled in later.
             end
-            info.(subjcurr).allchan.(atlases{iatlas}).region{ichan} = atlascurr.region;
+            info.(subject).allchan.(atlases{iatlas}).region{ichan} = atlascurr.region;
             
             % Convert xyz coordinates to double, if necessary (due to NaNs in coordinates).
             coords = {'x', 'y', 'z'};
@@ -113,74 +149,91 @@ for isubj = 1:numel(info.subj)
             end
             
             % Extract xyz coordinates.
-            info.(subjcurr).allchan.(atlases{iatlas}).xyz(ichan,:) = [atlascurr.x, atlascurr.y, atlascurr.z];
+            info.(subject).allchan.(atlases{iatlas}).xyz(ichan,:) = [atlascurr.x, atlascurr.y, atlascurr.z];
         end
         
         % Get top anatomical label from MNI atlas.
         try
-            mnilabel = lower(atlas_lookup(mniatlas, info.(subjcurr).allchan.mni.xyz(ichan,:), 'inputcoord', 'mni', 'queryrange', 3));
+            mnilabel = lower(atlas_lookup(mniatlas, info.(subject).allchan.mni.xyz(ichan,:), 'inputcoord', 'mni', 'queryrange', 3));
             mnilabel = mnilabel{1};
         catch
             mnilabel = 'NA'; % if no label or atlas was found.
         end
-        info.(subjcurr).allchan.mni.region{ichan} = mnilabel;
+        info.(subject).allchan.mni.region{ichan} = mnilabel;
         
         % Get top anatomical label from TAL atlas.
         try
-            tallabel = lower(atlas_lookup(talatlas, info.(subjcurr).allchan.tal.xyz(ichan,:), 'inputcoord', 'tal', 'queryrange', 3));
+            tallabel = lower(atlas_lookup(talatlas, info.(subject).allchan.tal.xyz(ichan,:), 'inputcoord', 'tal', 'queryrange', 3));
             tallabel = tallabel{1};
         catch
             tallabel = 'NA'; % if no label or atlas was found.
         end
-        info.(subjcurr).allchan.tal.region{ichan} = tallabel;
+        info.(subject).allchan.tal.region{ichan} = tallabel;
         
         % Get average anatomical annotations from Kahana group.
-        avglabel = lower(info.(subjcurr).allchan.avg.region{ichan});
+        avglabel = lower(info.(subject).allchan.avg.region{ichan});
         
         % Get individual anatomical annotations from Kahana group.
-        indlabel = lower(info.(subjcurr).allchan.ind.region{ichan});
+        indlabel = lower(info.(subject).allchan.ind.region{ichan});
         
-        % Get labels corresponding to particular lobes.
-        regions = {mnilabel, tallabel, indlabel};
-        frontal = contains(regions, {'frontal', 'opercularis', 'triangularis', 'precentral', 'rectal', 'rectus', 'orbital'});
-        temporal = contains(regions, {'temporal', 'fusiform'});
+        % Set terms to search for in region labels.
+        frontalterms = {'frontal', 'opercularis', 'triangularis', 'precentral', 'rectal', 'rectus', 'orbital'};
+        temporalterms = {'temporal', 'fusiform', 'hippocamp', 'bankssts', 'entorhinal'};
+        
+        % Determine lobe location based on individual labels only.
+        frontal = contains(indlabel, frontalterms);
+        temporal = contains(indlabel, temporalterms);
+        
+        if frontal
+            info.(subject).allchan.lobe{ichan} = 'F';
+        elseif temporal
+            info.(subject).allchan.lobe{ichan} = 'T';
+        else
+            info.(subject).allchan.lobe{ichan} = 'NA';
+        end
+        
+        % Determine lobe location based on majority vote across individual, MNI, and TAL.
+        regions = {indlabel, mnilabel, tallabel};
+        frontal = contains(regions, frontalterms);
+        temporal = contains(regions, temporalterms);
         nolabel = strcmpi('NA', regions);
         
-        % Determine lobe location based on majority vote across three labels.
         if sum(frontal) > (sum(~nolabel)/2)
-            info.(subjcurr).allchan.lobe{ichan} = 'F';
+            info.(subject).allchan.altlobe{ichan} = 'F';
         elseif sum(temporal) > (sum(~nolabel)/2)
-            info.(subjcurr).allchan.lobe{ichan} = 'T';
+            info.(subject).allchan.altlobe{ichan} = 'T';
         else
-            info.(subjcurr).allchan.lobe{ichan} = 'NA';
+            info.(subject).allchan.altlobe{ichan} = 'NA';
         end
     end
-    info.(subjcurr).allchan.type = info.(subjcurr).allchan.type(:);
-    info.(subjcurr).allchan.lobe = info.(subjcurr).allchan.lobe(:);
+    
+    % Re-format to column vectors.
+    info.(subject).allchan.type = info.(subject).allchan.type(:);
+    info.(subject).allchan.lobe = info.(subject).allchan.lobe(:);
+    info.(subject).allchan.altlobe = info.(subject).allchan.altlobe(:);
     for iatlas = 1:length(atlases)
-        info.(subjcurr).allchan.(atlases{iatlas}).region = info.(subjcurr).allchan.(atlases{iatlas}).region(:);
+        info.(subject).allchan.(atlases{iatlas}).region = info.(subject).allchan.(atlases{iatlas}).region(:);
     end
     
     % Get experiments performed.
     experiments = extractfield(dir([subjpathcurr 'experiments/']), 'name');
     experiments(contains(experiments, '.')) = [];
     
-    % For each experiment...
+    % Get experiment path info.
     for iexp = 1:numel(experiments)
+        % Get current experiment path.
         expcurr = experiments{iexp};
-        
-        % ...get subject experiment path, ...
         exppathcurr = [subjpathcurr 'experiments/' expcurr '/sessions/'];
         
-        % ...get session numbers, ...
+        % Get session numbers.
         sessions = extractfield(dir(exppathcurr), 'name');
         sessions(contains(sessions, '.')) = [];
         
-        % ...and get header file, data directory, and event file per session.
+        % Get header file, data directory, and event file per session.
         for isess = 1:numel(sessions)
-            info.(subjcurr).(expcurr).session(isess).headerfile = [exppathcurr sessions{isess} '/behavioral/current_processed/index.json'];
-            info.(subjcurr).(expcurr).session(isess).datadir    = [exppathcurr sessions{isess} '/ephys/current_processed/noreref/'];
-            info.(subjcurr).(expcurr).session(isess).eventfile  = [exppathcurr sessions{isess} '/behavioral/current_processed/task_events.json'];
+            info.(subject).(expcurr).session(isess).headerfile = [exppathcurr sessions{isess} '/behavioral/current_processed/index.json'];
+            info.(subject).(expcurr).session(isess).datadir    = [exppathcurr sessions{isess} '/ephys/current_processed/noreref/'];
+            info.(subject).(expcurr).session(isess).eventfile  = [exppathcurr sessions{isess} '/behavioral/current_processed/task_events.json'];
         end
     end
     
@@ -189,89 +242,85 @@ for isubj = 1:numel(info.subj)
     try
         sources = loadjson(sourcesfile);
     catch
-        info.(subjcurr).fs = 0; % if sources file not found.
+        info.(subject).fs = 0; % if sources file not found.
         continue
     end
     sourcesfield = fieldnames(sources);
-    info.(subjcurr).fs = sources.(sourcesfield{1}).sample_rate;
+    info.(subject).fs = sources.(sourcesfield{1}).sample_rate;
 end
-
-% Remove sessions with problems.
-% info.R1156D.FR1.session(4) = [];
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % >= 3 T/F channels
 % clean line spectra 80-150Hz
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %  Subject - Sess - Temp - Front - Corr./All - Acc.     - Temp - Front - Corr./All - Acc.     - BAD - Notes
-% 'R1020J' - 1    - 29T  - 32F   - 114/300   - 0.3800   - 17T  - 23F   - 104/283   - 0.3675   - :)  - Done. Core. 48.
 
-% 'R1032D' - 1    - 14T  - 11F   - 95/300    - 0.3167   - 8T   - 11F   - 79/231    - 0.34199  - :)  - Done. 19.
+% 'R1020J' - 1    - 31T  - 32F   - 114/300   - 0.3800   - 19T  - 23F   - 104/283   - 0.3675   - :)  - Done. Core. 48.
 
-% 'R1033D' - 1    - 18T  - 14F   - 23/108    - 0.2130   - 6T   - 13F   - 21/98     - 0.21429  - ??? - Done. Expansion? 
+% 'R1032D' - 1    - 14T  - 10F   - 95/300    - 0.3167   - 8T   - 10F   - 79/231    - 0.34199  - :)  - Done. 19.
 
-% 'R1034D' - 3    - 10T  - 55F   - 48/528    - 0.0909   - 8T   - 42F   - 41/475    - 0.0863   - ??? - Done. 29. Expansion.
-% 'R1034D' - 1/3  - 10T  - 55F   - 21/132    - 0.1591   - 8T   - 42F   - 21/126    - 0.1667   - ??? - 
-% 'R1034D' - 2/3  - 10T  - 55F   - 24/300    - 0.0800   - 8T   - 42F   - 17/268    - 0.0634   - ??? - 
-% 'R1034D' - 3/3  - 10T  - 55F   - 3/96      - 0.0312   - 8T   - 42F   - 3/81      - 0.0370   - ??? - 
+% 'R1033D' - 1    - 19T  - 14F   - 23/108    - 0.2130   - 6T   - 13F   - 21/98     - 0.21429  - ??? - Done. Expansion? 
 
-% 'R1045E' - 1    - 17T  - 27F   - 98/300    - 0.3267   - 16T  - 25F   - 77/236    - 0.3263   - :)  - Done. Core. 51.
+% 'R1034D' - 3    - 10T  - 67F   - 48/528    - 0.0909   - 8T   - 51F   - 41/475    - 0.0863   - ??? - Done. 29. Expansion.
+% 'R1034D' - 1/3  - 10T  - 67F   - 21/132    - 0.1591   - 8T   - 51F   - 21/126    - 0.1667   - ??? - 
+% 'R1034D' - 2/3  - 10T  - 67F   - 24/300    - 0.0800   - 8T   - 51F   - 17/268    - 0.0634   - ??? - 
+% 'R1034D' - 3/3  - 10T  - 67F   - 3/96      - 0.0312   - 8T   - 51F   - 3/81      - 0.0370   - ??? - 
 
-% 'R1059J' - 2    - 49T  - 59F   - 36/444    - 0.0811   - 20T  - 46F   - 35/421    - 0.0831   - ??? - Done. Expansion. 44. 
-% 'R1059J' - 1/2  - 49T  - 59F   - 8/144     - 0.0556   - 20T  - 46F   - 8/140     - 0.057143 - ??? - 
-% 'R1059J' - 2/2  - 49T  - 59F   - 28/300    - 0.0933   - 20T  - 46F   - 27/281    - 0.096085 - ??? - 
+% 'R1045E' - 1    - 17T  - 26F   - 98/300    - 0.3267   - 12T  - 24F   - 77/236    - 0.3263   - :)  - Done. Core. 51.
 
-% 'R1075J' - 2    - 7T   - 83F   - 150/600   - 0.2500   - 7T   - 34F   - 134/556   - 0.2410   - :)  - Done.
-% 'R1075J' - 1/2  - 7T   - 83F   - 102/300   - 0.3400   - 7T   - 34F   - 99/294    - 0.33673  - :)  - 105 recall (3 words repeated)
-% 'R1075J' - 2/2  - 7T   - 83F   - 48/300    - 0.1600   - 7T   - 34F   - 35/262    - 0.13359  - :)  - 48 recall
+% 'R1059J' - 2    - 53T  - 61F   - 36/444    - 0.0811   - 19T  - 47F   - 35/421    - 0.0831   - ??? - Done. Expansion. 44. 
+% 'R1059J' - 1/2  - 53T  - 61F   - 8/144     - 0.0556   - 19T  - 47F   - 8/140     - 0.057143 - ??? - 
+% 'R1059J' - 2/2  - 53T  - 61F   - 28/300    - 0.0933   - 19T  - 47F   - 27/281    - 0.096085 - ??? - 
+
+% 'R1075J' - 2    - 7T   - 88F   - 150/600   - 0.2500   - 7T   - 37F   - 134/556   - 0.2410   - :)  - Done.
+% 'R1075J' - 1/2  - 7T   - 88F   - 102/300   - 0.3400   - 7T   - 37F   - 99/294    - 0.33673  - :)  - 105 recall (3 words repeated)
+% 'R1075J' - 2/2  - 7T   - 88F   - 48/300    - 0.1600   - 7T   - 37F   - 35/262    - 0.13359  - :)  - 48 recall
  
 % 'R1080E' - 2    - 6T   - 10F   - 107/384   - 0.2786   - 6T   - 7F    - 106/376   - 0.2819   - :)  - Good pending clean. ***
 % 'R1080E' - 1/2  - 6T   - 10F   - 47/180    - 0.2611   - 6T   - 7F    - 47/176    - 0.2670   - :)  - 47
 % 'R1080E' - 2/2  - 6T   - 10F   - 60/204    - 0.2941   - 6T   - 7F    - 59/200    - 0.295    - :)  - 59
 
-% 'R1120E' - 2    - 14T  - 4F    - 207/600   - 0.3450   - 8T   - 4F    - 207/599   - 0.3456   - :)  - Done. Core. 33.
-% 'R1120E' - 1/2  - 14T  - 4F    - 97/300    - 0.3233   - 8T   - 4F    - 97/300    - 0.3233   - :)  - 97
-% 'R1120E' - 2/2  - 14T  - 4F    - 110/300   - 0.3667   - 8T   - 4F    - 110/299   - 0.3679   - :)  - 112
+% 'R1120E' - 2    - 13T  - 3F    - 207/600   - 0.3450   - 7T   - 3F    - 207/599   - 0.3456   - :)  - Done. Core. 33.
+% 'R1120E' - 1/2  - 13T  - 3F    - 97/300    - 0.3233   - 7T   - 3F    - 97/300    - 0.3233   - :)  - 97
+% 'R1120E' - 2/2  - 13T  - 3F    - 110/300   - 0.3667   - 7T   - 3F    - 110/299   - 0.3679   - :)  - 112
 
-% 'R1128E' - 1    - 8T   - 10F   - 141/300   - 0.4700   - 4T   - 9F    - 134/276   - 0.48551  - :)  - Done. Core. 26. 147 recall. 
+% 'R1135E' - 4    - 7T   - 15F   - 107/1200  - 0.0892   - 6T   - 13F   - 31/370    - 0.0838   - ??? - Done. Expansion.
+% 'R1135E' - 1/4  - 7T   - 15F   - 26/300    - 0.0867   - 6T   - 13F   - 10/61     - 0.16393  - ??? - 
+% 'R1135E' - 2/4  - 7T   - 15F   - 43/300    - 0.1433   - 6T   - 13F   - 8/48      - 0.16667  - ??? - 
+% 'R1135E' - 3/4  - 7T   - 15F   - 26/300    - 0.0867   - 6T   - 13F   - 6/105     - 0.057143 - ??? - 
+% 'R1135E' - 4/4  - 7T   - 15F   - 12/300    - 0.0400   - 6T   - 13F   - 7/156     - 0.044872 - ??? -
 
-% 'R1135E' - 4    - 6T   - 14F   - 107/1200  - 0.0892   - 5T   - 12F   - 31/370    - 0.0838   - ??? - Done. Expansion.
-% 'R1135E' - 1/4  - 6T   - 14F   - 26/300    - 0.0867   - 5T   - 12F   - 10/61     - 0.16393  - ??? - 
-% 'R1135E' - 2/4  - 6T   - 14F   - 43/300    - 0.1433   - 5T   - 12F   - 8/48      - 0.16667  - ??? - 
-% 'R1135E' - 3/4  - 6T   - 14F   - 26/300    - 0.0867   - 5T   - 12F   - 6/105     - 0.057143 - ??? - 
-% 'R1135E' - 4/4  - 6T   - 14F   - 12/300    - 0.0400   - 5T   - 12F   - 7/156     - 0.044872 - ??? -
+% 'R1142N' - 1    - 19T  - 60F   - 48/300    - 0.1600   - 18T  - 57F   - 37/194    - 0.19072  - ??? - Done. Expansion. 50 recall. 
 
-% 'R1142N' - 1    - 18T  - 59F   - 48/300    - 0.1600   - 17T  - 56F   - 37/194    - 0.19072  - ??? - Done. Expansion. 50 recall. 
+% 'R1147P' - 3    - 41T  - 33F   - 101/559   - 0.1807   - 10T   - 14F   - 69/401    - 0.1721   - :)  - Done. Core.
+% 'R1147P' - 1/3  - 41T  - 33F   - 73/283    - 0.2580   - 10T   - 14F   - 50/204    - 0.2451   - :)  - 
+% 'R1147P' - 2/3  - 41T  - 33F   - 11/96     - 0.1146   - 10T   - 14F   -   9/70    - 0.12857  - :)  - 
+% 'R1147P' - 3/3  - 41T  - 33F   - 17/180    - 0.0944   - 10T   - 14F   - 10/127    - 0.07874  - :)  - 
 
-% 'R1147P' - 3    - 40T  - 32F   - 101/559   - 0.1807   - 9T   - 14F   - 69/401    - 0.1721   - :)  - Done. Core.
-% 'R1147P' - 1/3  - 40T  - 32F   - 73/283    - 0.2580   - 9T   - 14F   - 50/204    - 0.2451   - :)  - 
-% 'R1147P' - 2/3  - 40T  - 32F   - 11/96     - 0.1146   - 9T   - 14F   -   9/70    - 0.12857  - :)  - 
-% 'R1147P' - 3/3  - 40T  - 32F   - 17/180    - 0.0944   - 9T   - 14F   - 10/127    - 0.07874  - :)  - 
+% 'R1149N' - 1    - 47T  - 18F   - 64/300    - 0.2133   - 30T  - 18F   - 47/248    - 0.18952  - ??? - Done. Expansion. 67 recall.
 
-% 'R1149N' - 1    - 39T  - 16F   - 64/300    - 0.2133   - 29T  - 16F   - 47/248    - 0.18952  - ??? - Done. Expansion. 67 recall.
+% 'R1151E' - 3    - 7T   - 9F    - 208/756   - 0.2751   - 7T   - 9F    - 202/742   - 0.2722   - :)  - Good pending cleaning. Core.
+% 'R1151E' - 1/3  - 7T   - 9F    - 77/300    - 0.2567   - 7T   - 9F    - 76/294    - 0.2585   - :)  - 
+% 'R1151E' - 2/3  - 7T   - 9F    - 83/300    - 0.2767   - 7T   - 9F    - 81/296    - 0.2736   - :)  - 
+% 'R1151E' - 3/3  - 7T   - 9F    - 48/156    - 0.3077   - 7T   - 9F    - 45/152    - 0.2961   - :)  -
 
-% 'R1151E' - 3    - 7T   - 5F    - 208/756   - 0.2751   - 7T   - 5F    -  202/742  - 0.2722   - :)  - Good pending cleaning. Core.
-% 'R1151E' - 1/3  - 7T   - 5F    - 77/300    - 0.2567   - 7T   - 5F    -  76/294   - 0.2585   - :)  - 
-% 'R1151E' - 2/3  - 7T   - 5F    - 83/300    - 0.2767   - 7T   - 5F    -  81/296   - 0.2736   - :)  - 
-% 'R1151E' - 3/3  - 7T   - 5F    - 48/156    - 0.3077   - 7T   - 5F    -  45/152   - 0.2961   - :)  -
+% 'R1154D' - 3    - 40T  - 20F   - 271/900   - 0.3011   - 10T   - 19F   - 253/841   - 0.3008   - :)  -  Core.
+% 'R1154D' - 1/3  - 40T  - 20F   - 63/300    - 0.2100   - 10T   - 19F   - 63/300    - 0.2100   - :)  - 
+% 'R1154D' - 2/3  - 40T  - 20F   - 108/300   - 0.3600   - 10T   - 19F   - 98/263    - 0.37262  - :)  - 
+% 'R1154D' - 3/3  - 40T  - 20F   - 100/300   - 0.3333   - 10T   - 19F   - 92/278    - 0.33094  - :)  - 
 
-% 'R1154D' - 3    - 39T  - 20F   - 271/900   - 0.3011   - 9T   - 19F   - 253/841   - 0.3008   - :)  -  Core.
-% 'R1154D' - 1/3  - 39T  - 20F   - 63/300    - 0.2100   - 9T   - 19F   - 63/300    - 0.2100   - :)  - 
-% 'R1154D' - 2/3  - 39T  - 20F   - 108/300   - 0.3600   - 9T   - 19F   - 98/263    - 0.37262  - :)  - 
-% 'R1154D' - 3/3  - 39T  - 20F   - 100/300   - 0.3333   - 9T   - 19F   - 92/278    - 0.33094  - :)  - 
+% 'R1162N' - 1    - 25T  - 11F   - 77/300    - 0.2567   - 15T  - 11F   - 75/275    - 0.27273  - :)  - Done. Expansion. 
 
-% 'R1162N' - 1    - 25T  - 11F   - 77/300    - 0.2567   - 17T  - 11F   - 75/275    - 0.27273  - :)  - Done. Expansion. 
+% 'R1166D' - 3    - 5T   - 37F   - 129/900   - 0.1433   - 5T   - 19F   - 124/864   - 0.1435   - :)  - Done. Core. 
+% 'R1166D' - 1/3  - 5T   - 37F   - 30/300    - 0.1000   - 5T   - 19F   - 30/295    - 0.1017   - :)  - 
+% 'R1166D' - 2/3  - 5T   - 37F   - 49/300    - 0.1633   - 5T   - 19F   - 47/280    - 0.16786  - :)  - 
+% 'R1166D' - 3/3  - 5T   - 37F   - 50/300    - 0.1667   - 5T   - 19F   - 47/289    - 0.16263  - :)  - 
 
-% 'R1166D' - 3    - 5T   - 38F   - 129/900   - 0.1433   - 5T   - 35F   - 124/864   - 0.1435   - :)  - Done. Core. 
-% 'R1166D' - 1/3  - 5T   - 38F   - 30/300    - 0.1000   - 5T   - 35F   - 30/295    - 0.1017   - :)  - 
-% 'R1166D' - 2/3  - 5T   - 38F   - 49/300    - 0.1633   - 5T   - 35F   - 47/280    - 0.16786  - :)  - 
-% 'R1166D' - 3/3  - 5T   - 38F   - 50/300    - 0.1667   - 5T   - 35F   - 47/289    - 0.16263  - :)  - 
+% 'R1167M' - 2    - 42T  - 21F   - 166/372   - 0.4462   - 32T  - 19F   - 133/285   - 0.4508   - :)  - Done. Core. 33. Flat slope. 
+% 'R1167M' - 1/2  - 42T  - 21F   - 80/192    - 0.4167   - 32T  - 19F   - 54/127    - 0.4252   - :)  - 
+% 'R1167M' - 2/2  - 42T  - 21F   - 86/180    - 0.4778   - 32T  - 19F   - 79/158    - 0.5      - :)  - 
 
-% 'R1167M' - 2    - 39T  - 20F   - 166/372   - 0.4462   - 29T  - 18F   - 133/285   - 0.4508   - :)  - Done. Core. 33. Flat slope. 
-% 'R1167M' - 1/2  - 39T  - 20F   - 80/192    - 0.4167   - 29T  - 18F   - 54/127    - 0.4252   - :)  - 
-% 'R1167M' - 2/2  - 39T  - 20F   - 86/180    - 0.4778   - 29T  - 18F   - 79/158    - 0.5      - :)  - 
-
-% 'R1175N' - 1    - 34T  - 30F   - 68/300    - 0.2267   - 24T  - 27F   - 57/262    - 0.21756  - ??? - Done. 73 recall. 
+% 'R1175N' - 1    - 39T  - 29F   - 68/300    - 0.2267   - 27T  - 26F   - 57/262    - 0.21756  - ??? - Done. 73 recall. 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%% R1020J %%%%%%
@@ -279,7 +328,7 @@ end
 % Notes:
 % FINISHED FINISHED
 
-% 'R1020J' - 1    - 29T  - 32F   - 114/300   - 0.3800   - 17T  - 23F   - 104/283   - 0.3675   - :)  - Done. 48.
+% 'R1020J' - 1    - 31T  - 32F   - 114/300   - 0.3800   - 19T  - 23F   - 104/283   - 0.3675   - :)  - Done. 48.
 
 % Some broken channels, big fluctuations and flat lines. 
 % Some channels have extra line noise, but notches are effective.
@@ -313,23 +362,19 @@ info.R1020J.badchan.epileptic = {'RAT6', 'RAT7', 'RAT8', 'RSTA2', 'RSTA3', 'RFA1
     'RAT*' ... % synchronous little spikelets, intermittent buzz. Also very swoopy. Confirmed confirmed.
     }; 
 
-info.R1020J.refchan = {'all'};
-
 % Line Spectra Info:
 % Session 1/1 z-thresh 0.45, 1 manual (tiny tiny peak), using re-ref. Re-ref and non-ref similar spectra.
 info.R1020J.FR1.bsfilt.peak      = [60  120 180 219.9 240 300 ...
     190.3];
 info.R1020J.FR1.bsfilt.halfbandw = [0.5 0.5 0.7 0.5   0.5 0.8 ...
     0.5];
-info.R1020J.FR1.bsfilt.edge      = 3.1840;
+info.R1020J.FR1.bsfilt.edge      = util_calculatebandstopedge(info.R1020J.FR1.bsfilt.peak, ...
+    info.R1020J.FR1.bsfilt.halfbandw, ...
+    info.R1020J.fs);
 
 % Bad Segment Info:
 % Focused primarily on removal of buzzy episodes, also on some episodes where RSTB7 has big fluctuations
-info.R1020J.FR1.session(1).badsegment = [499311,500554;508251,508716;553916,554937;578019,580740;668182,668792;937194,938417;948517,950659;1023532,1024720;1049122,1049977;1061343,1062002;1153784,1157155;1218605,1221167;1335219,1337563;1470021,1472000;1541100,1543946;1669122,1669848;1770421,1773973;1840485,1842900;1940356,1941288;1942113,1943574;1944162,1947058;1948727,1949010;1951509,1953930;2040513,2042489;2282545,2283013;2296392,2297288;2323413,2326543;2340670,2342784;2478525,2479570;2553863,2554364;2556896,2557381;2573988,2574872;2650561,2651735;2653851,2655606;2963848,2967067;3230319,3232379];
-info.R1020J.FR1.session(1).jumps      = [222,425;21169,21462;94052,94252;306967,307168;447445,447647;578313,578513;578948,579148;949281,949481;949719,949920;1154413,1154613;1669153,1669364;1771295,1771729;1771755,1771988;1772174,1772584;1842006,1842206;1946359,1946696;1953295,1953615;2040832,2041131;2041298,2041498;2323960,2324506;2324588,2324793;2324878,2325078;2340931,2341402;2341990,2342352;2654129,2654329;2654583,2654783;2654833,2655035;2965200,2965400;2965498,2965823;3230710,3231375;3231777,3232118];
-
-% Likely over prioritizes larger slinky fluctuations, definitely misses buzzy episodes.
-% info.R1020J.FR1.session(1).badsegment = [1,2146;20947,21937;46669,47299;85793,86138;98094,98896;148350,149144;151454,152000;264839,265442;268001,268561;272001,272601;301702,302329;308251,309974;447347,448000;572001,572918;578266,580000;598812,600000;630943,632000;641025,645614;668205,668733;687666,688000;800001,800819;887763,888542;891196,892000;948651,950399;982014,983584;996001,998369;1154204,1156000;1218384,1219810;1226164,1227434;1236001,1236424;1280001,1281224;1284001,1284743;1390989,1391356;1541589,1543262;1669151,1669786;1770680,1773028;1840772,1842587;1853546,1854853;1940377,1941165;1945269,1946950;1952001,1953684;2040261,2042127;2108068,2108899;2180001,2180725;2282586,2282716;2296264,2297015;2324001,2326076;2340777,2342783;2574043,2574783;2652423,2653087;2653858,2655576;2918344,2919049;2964001,2966772;3076259,3076840;3167062,3167759;3230511,3232383];
+info.R1020J.FR1.session(1).badsegment = [222,425;21169,21462;94052,94252;306967,307168;447445,447647;499311,500554;508251,508716;553916,554937;578019,580740;668182,668792;937194,938417;948517,950659;1023532,1024720;1049122,1049977;1061343,1062002;1153784,1157155;1218605,1221167;1335219,1337563;1470021,1472000;1541100,1543946;1669122,1669848;1770421,1773973;1840485,1842900;1940356,1941288;1942113,1943574;1944162,1947058;1948727,1949010;1951509,1953930;2040513,2042489;2282545,2283013;2296392,2297288;2323413,2326543;2340670,2342784;2478525,2479570;2553863,2554364;2556896,2557381;2573988,2574872;2650561,2651735;2653851,2655606;2963848,2967067;3230319,3232379];
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%% R1032D %%%%%%
@@ -337,7 +382,7 @@ info.R1020J.FR1.session(1).jumps      = [222,425;21169,21462;94052,94252;306967,
 % Notes:
 % FINISHED FINISHED
 
-% 'R1032D' - 1    - 14T  - 11F   - 95/300    - 0.3167   - 8T  - 11F   - 79/231 - 0.34199  - :)  - Done. 19.
+% 'R1032D' - 1    - 14T  - 10F   - 95/300    - 0.3167   - 8T  - 10F   - 79/231 - 0.34199  - :)  - Done. 19.
 
 % Mostly depth electrodes. 
 % Lots of reference noise and flat-line channels.
@@ -394,7 +439,7 @@ info.R1032D.FR1.session(1).jumps      = [390578,390775;401990,402543;424978,4257
 % Notes:
 % FINISHED FINISHED
 
-% 'R1033D' - 1    - 18T  - 14F   - 23/108  - 0.2130   - 6T   - 13F   - 21/98 - 0.21429   - ??? - Done. Expansion? 
+% 'R1033D' - 1    - 19T  - 14F   - 23/108  - 0.2130   - 6T   - 13F   - 21/98 - 0.21429   - ??? - Done. Expansion? 
 
 % Removed buzz and IED events, lots of large and some small blips that carry through from depths.
 % Remaining surface channels have frequent slow drifts.
@@ -436,10 +481,10 @@ info.R1033D.FR1.session(1).jumps      = [28115,28917;39804,40613;52925,56006;730
 % Notes:
 % FINISHED FINISHED
 
-% 'R1034D' - 3    - 10T  - 55F   - 48/528    - 0.0909   - 8T   - 42F   - 41/475    - 0.0863   - ??? - Done. 29. Expansion.
-% 'R1034D' - 1/3  - 10T  - 55F   - 21/132    - 0.1591   - 8T   - 42F   - 21/126    - 0.1667   - ??? - 
-% 'R1034D' - 2/3  - 10T  - 55F   - 24/300    - 0.0800   - 8T   - 42F   - 17/268    - 0.0634   - ??? - 
-% 'R1034D' - 3/3  - 10T  - 55F   - 3/96      - 0.0312   - 8T   - 42F   - 3/81      - 0.0370   - ??? - 
+% 'R1034D' - 3    - 10T  - 67F   - 48/528    - 0.0909   - 8T   - 51F   - 41/475    - 0.0863   - ??? - Done. 29. Expansion.
+% 'R1034D' - 1/3  - 10T  - 67F   - 21/132    - 0.1591   - 8T   - 51F   - 21/126    - 0.1667   - ??? - 
+% 'R1034D' - 2/3  - 10T  - 67F   - 24/300    - 0.0800   - 8T   - 51F   - 17/268    - 0.0634   - ??? - 
+% 'R1034D' - 3/3  - 10T  - 67F   - 3/96      - 0.0312   - 8T   - 51F   - 3/81      - 0.0370   - ??? - 
 
 % Line spectra relatively clean.
 % Channels are ropy in Session 1, need LP to clean.
@@ -496,7 +541,7 @@ info.R1034D.FR1.session(3).jumps = [54931,55505;100734,101054;102527,102847;1030
 % Notes: 
 % FINISHED FINISHED
 
-% 'R1045E' - 1    - 17T  - 27F   - 98/300    - 0.3267   - 16T  - 25F   - 77/236    - 0.3263   - :)  - Done. Core. 51.
+% 'R1045E' - 1    - 17T  - 26F   - 98/300    - 0.3267   - 12T  - 24F   - 77/236    - 0.3263   - :)  - Done. Core. 51.
 
 % End of segment goes bad. Samples 2603373 onward are bad.
 % Enormous spikes in several channels, screwing up demeaning. 
@@ -566,9 +611,9 @@ info.R1045E.FR1.session(1).jumps = [171692,172466;210724,210924;211037,211298;30
 % Buzz is concerning.
 % Great coverage for phase encoding, and considering how many channels I threw out, I'm confident in what remains.
 
-% 'R1059J' - 2    - 49T  - 59F   - 36/444  - 0.0811   - 20T  - 46F   - 35/421  - 0.0831   - ??? - Done. Expansion. 44. 
-% 'R1059J' - 1/2  - 49T  - 59F   - 8/144   - 0.0556   - 20T  - 46F   - 8/140   - 0.057143 - ??? - 
-% 'R1059J' - 2/2  - 49T  - 59F   - 28/300  - 0.0933   - 20T  - 46F   - 27/281  - 0.096085 - ??? - 
+% 'R1059J' - 2    - 53T  - 61F   - 36/444  - 0.0811   - 19T  - 47F   - 35/421  - 0.0831   - ??? - Done. Expansion. 44. 
+% 'R1059J' - 1/2  - 53T  - 61F   - 8/144   - 0.0556   - 19T  - 47F   - 8/140   - 0.057143 - ??? - 
+% 'R1059J' - 2/2  - 53T  - 61F   - 28/300  - 0.0933   - 19T  - 47F   - 27/281  - 0.096085 - ??? - 
 
 % Channel Info:
 info.R1059J.badchan.broken = {'LDC*', 'RDC7', 'LFC1', 'LIHA1', 'RAT1', 'RAT8', 'RIHA1', 'RIHB1', ... % big fluctuations. Confirmed.
@@ -607,9 +652,9 @@ info.R1059J.FR1.session(2).jumps = [261,464;1549,1754;3201,3407;20294,20495;2207
 % Notes:
 % FINISHED FINISHED
 
-% 'R1075J' - 2    - 7T   - 83F   - 150/600   - 0.2500   - 7T   - 34F   -   134/556 - 0.2410               - :)  - Done.
-% 'R1075J' - 1/2  - 7T   - 83F   - 102/300   - 0.3400   - 7T   - 34F   -   99/294  - 0.33673              - :)  - 105 recall (3 words repeated)
-% 'R1075J' - 2/2  - 7T   - 83F   - 48/300    - 0.1600   - 7T   - 34F   -   35/262  - 0.13359              - :)  - 48 recall
+% 'R1075J' - 2    - 7T   - 88F   - 150/600   - 0.2500   - 7T   - 37F   -   134/556 - 0.2410               - :)  - Done.
+% 'R1075J' - 1/2  - 7T   - 88F   - 102/300   - 0.3400   - 7T   - 37F   -   99/294  - 0.33673              - :)  - 105 recall (3 words repeated)
+% 'R1075J' - 2/2  - 7T   - 88F   - 48/300    - 0.1600   - 7T   - 37F   -   35/262  - 0.13359              - :)  - 48 recall
 
 % First subject in which I'm scrolling until the end of recall trials too.
 
@@ -719,9 +764,9 @@ info.R1080E.FR1.session(2).jumps = [409792,412057;1591855,1591880;1802059,180276
 % Notes: 
 % FINISHED FINISHED
 
-% 'R1120E' - 2    - 14T  - 4F    - 207/600   - 0.3450   - 8T   - 4F    - 207/599  - 0.3456    - :)  - Done. Core. 33.
-% 'R1120E' - 1/2  - 14T  - 4F    - 97/300    - 0.3233   - 8T   - 4F    - 97/300   - 0.3233    - :)  - 97
-% 'R1120E' - 2/2  - 14T  - 4F    - 110/300   - 0.3667   - 8T   - 4F    - 110/299  - 0.3679    - :)  - 112
+% 'R1120E' - 2    - 13T  - 3F    - 207/600   - 0.3450   - 7T   - 3F    - 207/599  - 0.3456    - :)  - Done. Core. 33.
+% 'R1120E' - 1/2  - 13T  - 3F    - 97/300    - 0.3233   - 7T   - 3F    - 97/300   - 0.3233    - :)  - 97
+% 'R1120E' - 2/2  - 13T  - 3F    - 110/300   - 0.3667   - 7T   - 3F    - 110/299  - 0.3679    - :)  - 112
 
 % When switching to channel labels using individual atlases, channel numbers go to 14T and 4F (vs. 12T and 1F)
 % Very clean line spectra.
@@ -760,45 +805,15 @@ info.R1120E.FR1.session(2).badsegment = [334134,334682;432274,434280;438585,4395
 info.R1120E.FR1.session(2).jumps = [2003415,2003508];
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%%%% R1128E %%%%%%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% Notes:
-
-% 'R1128E' - 1    - 8T   - 10F   - 141/300   - 0.4700   - 4T - 9F    - 134/276 - 0.48551   - :) - Done. Core. 26. 147 recall. 
-
-% Mostly depth electrodes. Very frequency epileptic events that are present
-% in temporal grids.
-% Ambiguous IEDs, not sure if I got them all OR if I was too aggressive. 
-% RANTTS5 is mildly buzzy, but keeping in
-
-% Not great for phase encoding.
-
-% Channel Info:
-info.R1128E.badchan.broken = {'RTRIGD10', 'RPHCD9', ... % one is all line noise, the other large deviations
-    };
-info.R1128E.badchan.epileptic = {'RANTTS1', 'RANTTS2', 'RANTTS3', 'RANTTS4', ... % synchronous swoops with spikes on top
-    'RINFFS1'}; % marked as bad by Kahana Lab
-info.R1128E.refchan = {'all'};
-
-% Line Spectra Info:
-info.R1128E.FR1.bsfilt.peak      = [60  179.9 239.8 299.7];
-info.R1128E.FR1.bsfilt.halfbandw = [0.5 0.5   0.5   0.7];
-info.R1128E.FR1.bsfilt.edge      = 3.1852;
-
-% Bad Segment Info:
-info.R1128E.FR1.session(1).badsegment = [240728,241107;278500,278928;339661,340117;366194,366654;377155,377797;457180,457435;462388,462852;472334,473000;487250,487512;751091,751673;778825,779287;811298,811903;851544,852080;856877,857482;945783,947052;1056745,1057354;1059291,1060215;1062937,1063458;1067803,1068927;1081370,1081596;1088020,1089028;1122046,1122559;1211260,1212163;1280042,1280526;1306023,1306692;1571722,1572790;1638470,1638894;1703062,1703764;1710123,1710551;1815353,1816167;1816803,1817247;1819425,1819849;1911358,1911874;1939914,1940656;2038859,2039464;2133429,2133864;2323550,2324143;2331405,2331849;2333257,2333664;2338720,2339212;2341287,2342142;2384541,2384808;2675600,2676282;2676897,2677320;2906172,2906769];
-info.R1128E.FR1.session(1).jumps = [844877,847152;1502497,1507730;1510489,1514484;1659364,1660412;1669905,1670328];
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%% R1135E %%%%%% 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Notes:
 
-% 'R1135E' - 4    - 6T   - 14F   - 107/1200  - 0.0892 - 5T - 12F - 31/370   -  0.0838                         - ??? - Done. Expansion.
-% 'R1135E' - 1/4  - 6T   - 14F   - 26/300    - 0.0867 - 5T - 12F - 10/61 - 0.16393                     - ??? - 
-% 'R1135E' - 2/4  - 6T   - 14F   - 43/300    - 0.1433 - 5T - 12F - 8/48 - 0.16667                               - ??? - 
-% 'R1135E' - 3/4  - 6T   - 14F   - 26/300    - 0.0867 - 5T - 12F - 6/105 - 0.0571436                                    - ??? - 
-% 'R1135E' - 4/4  - 6T   - 14F   - 12/300    - 0.0400 - 5T - 12F - 7/156 - 0.044872                                 - ??? -
+% 'R1135E' - 4    - 7T   - 15F   - 107/1200  - 0.0892 - 6T - 13F - 31/370   -  0.0838                         - ??? - Done. Expansion.
+% 'R1135E' - 1/4  - 7T   - 15F   - 26/300    - 0.0867 - 6T - 13F - 10/61 - 0.16393                     - ??? - 
+% 'R1135E' - 2/4  - 7T   - 15F   - 43/300    - 0.1433 - 6T - 13F - 8/48 - 0.16667                               - ??? - 
+% 'R1135E' - 3/4  - 7T   - 15F   - 26/300    - 0.0867 - 6T - 13F - 6/105 - 0.0571436                                    - ??? - 
+% 'R1135E' - 4/4  - 7T   - 15F   - 12/300    - 0.0400 - 6T - 13F - 7/156 - 0.044872                                 - ??? -
 
 % Frequent interictal events, and lots of channels show bursts of 20Hz activity. 
 % RSUPPS grid goes bad in Session 3. 
@@ -847,7 +862,7 @@ info.R1135E.FR1.session(4).jumps = [];
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Notes:
 
-% 'R1142N' - 1    - 18T  - 59F   - 48**/300  - 0.1600   - 17T  - 56F   - 37/194 - 0.19072   - ??? - Done. Expansion. 50 recall. 
+% 'R1142N' - 1    - 19T  - 60F   - 48**/300  - 0.1600   - 18T  - 57F   - 37/194 - 0.19072   - ??? - Done. Expansion. 50 recall. 
 
 % 'AST1', 'AST2', 'PST1', 'PST2' buzzy channels, though Roemer says they're ok
 % Lots of slow swoops, and I'm not sure how I feel about them.
@@ -869,6 +884,7 @@ info.R1142N.refchan = {'all'};
 % Session 1/1 eyeballing
 info.R1142N.FR1.bsfilt.peak      = [60  120 180 240 300];
 info.R1142N.FR1.bsfilt.halfbandw = [0.5 0.5 0.5 0.5 0.5];
+info.R1142N.FR1.bsfilt.edge = 3.1840;
 
 % Bad Segment Info:
 info.R1142N.FR1.session(1).badsegment = [1,1915;2978,3154;6479,7036;7459,7503;15373,15544;16498,17176;20396,21061;23583,23995;25506,26211;29605,30170;32562,33144;33417,33998;35838,35877;36151,36762;38320,39641;44001,44776;45968,46098;46986,47041;48001,48703;50210,50275;50938,51401;53054,53566;54376,55014;57495,58176;58629,59114;60122,60381;61903,62630;63349,64137;64458,64502;66374,66437;74591,75168;81675,81722;82156,82219;82250,82281;82629,82665;83172,83235;83855,83904;83981,84016;84605,84631;85033,85066;86548,86638;87802,88711;88955,88996;89516,89558;91976,92004;92535,92596;92828,92889;103419,104000;104186,104227;104802,104840;105183,105254;105339,105450;105530,105558;109885,110514;112261,112287;112640,112674;112707,112746;115328,115439;118556,118582;119072,119103;120933,121587;122605,122630;122750,122778;122882,122998;123336,123369;125143,125187;130180,130213;130608,130649;130718,130759;133465,133499;133605,134281;134565,134622;135349,135399;136001,137079;137404,137439;137793,137883;139906,139950;142218,142867;159712,159772;160001,160749;161562,162047;162280,162342;162403,162482;162661,162781;162852,162896;163223,163920;165025,165544;165559,165611;167782,168518;169425,170047;170680,171718;172001,173184;173793,174953;175508,177219;177734,178058;180001,197372;198927,200000;202540,215995;216001,232000;233000,236000;240525,240905;241557,241888;242731,243254;244001,244321;244323,249982;252057,252101;253428,253482;254680,254719;255140,255176;255717,255864;256135,256988;258586,259853;261782,262713;264624,265246;266651,266695;268850,269370;270046,270084;270532,270969;272275,272692;273331,273372;278573,278619;280267,280754;284001,284504;285484,285512;286180,286222;287099,287143;287309,287393;288780,288819;291787,291837;297928,298587;312952,313840;314470,314850;315615,315659;316226,317047;318137,318313;318978,319643;320052,320719;321559,321601;333694,333719;334199,334375;334438,334471;334890,334928;335551,336000;336323,336800;345495,346168;347148,347705;372092,372735;376001,376574;377551,377571;380001,380980;383083,383122;384170,384803;386796,386834;389839,390434;392619,393577;398532,400000;418532,419073;420001,420571;432952,433509;433573,433603;437917,438547;439314,440000;442667,443383;450556,451079;457831,458283;459699,460287;468001,469512;478309,479374;480001,480641;481430,482380;485140,486160;490922,491538;510836,511458;514100,514160;515301,516000;518866,520000;522264,523667;525648,525711;530968,531452;536885,537644;541895,542297;545879,546488;576901,577574;587341,587377;602935,602966;616140,616768;632001,632663;648718,649241;652363,652545;659137,659826;669398,669896;670556,670939;674796,675213;705288,705802;707771,708000;709054,709547;712001,712383;712705,712760;734497,734912;737390,738101;742341,743087;747091,747692;748291,749104;761995,762727;789191,789792;822952,824000;832001,832582;834393,835606;836401,837015;838387,838936;855519,855987;857745,858222;858857,859423;892130,892905;901189,901945;915527,916000;918067,918600;920896,920964;929146,929633;932221,932800;934414,935108;948726,949241;968511,969149;972949,973364;1000474,1000966;1002382,1002842;1005796,1007049;1017019,1018246;1025008,1025910;1032879,1033534;1035505,1035915;1037519,1039211;1048425,1049023;1053245,1054076;1057522,1057998;1060154,1060214;1065968,1066633;1071134,1071557;1072487,1073265;1077911,1078469;1091188,1091305;1101893,1102466;1127602,1128000;1130195,1130698;1131678,1132310;1133393,1134032;1136342,1136860;1137068,1137754;1143616,1144780;1153202,1153829;1159075,1159761;1167376,1168000;1175513,1176000;1193116,1193813;1230852,1231630;1248272,1248840;1254274,1255197;1266855,1267721;1286624,1287151;1294847,1296000;1313070,1313783;1332001,1332510;1376581,1377343;1380054,1380596;1393847,1394504;1397162,1397877;1410396,1411138;1429003,1429617;1441113,1441708;1477549,1478630;1509035,1509544;1514003,1514547;1527468,1528000;1535659,1536257;1547263,1547737;1549368,1550114;1576001,1576590;1584001,1584913;1588699,1589302;1592646,1593421;1595355,1596101;1598823,1599731;1604296,1604800;1614307,1614832;1622113,1622784;1629960,1630590;1642312,1642721;1707301,1707864;1712888,1713659;1716159,1716692;1745884,1746582;1749819,1750679;1771218,1771619;1819505,1820000;1835255,1836000;1855266,1856000;1860885,1861558;1863653,1864000;1865988,1866888;1880269,1880864;1891834,1892628;1901237,1901848;1925988,1927586;1961106,1962788;1964659,1965235;1975700,1976268;1981775,1982546;1985301,1985802;2027149,2027937;2031864,2032640;2066791,2068485;2095193,2095979;2099331,2100579;2108052,2108437;2116848,2119009;2121581,2122449;2144724,2145184;2179069,2179767;2192001,2192812;2236461,2237292;2252449,2253052;2255307,2256389;2262427,2263036;2264001,2264667;2266226,2266824;2306785,2307404;2312398,2312907;2336987,2337515;2344311,2345026;2351296,2352518;2355654,2356188;2371766,2372433;2385009,2386413;2387567,2388000;2406914,2407356;2429782,2430345;2432759,2433469;2443825,2444716;2449178,2449759;2450237,2450885;2456001,2456808;2527072,2527571;2554710,2555533;2557702,2564000;2568001,2568708;2584066,2586239;2606444,2607006;2620573,2621141;2669646,2671187;2673086,2673727;2676251,2676932;2724001,2724448;2752995,2753566;2754621,2755149;2772001,2772848;2785809,2787033;2793807,2794369;2816569,2820000;2852324,2852941;2873785,2874380;2932291,2932867;2946527,2949077;2955790,2956611;2966100,2967340;2972001,2972657;2981253,2981843;2985116,2985902;3000304,3000843;3005503,3006144;3018073,3018872;3020748,3021310;3035046,3037259;3047132,3047767;3056001,3056499;3060001,3061052;3068490,3069036;3107661,3109211;3196589,3196918;3197328,3197835;3204001,3204674;3221121,3221687;3233718,3234380;3239207,3240000;3254208,3261587;3280576,3281101;3288505,3289240;3300850,3301507;3313033,3313776;3355807,3356511;3364271,3365042;3365404,3366110;3408904,3409719;3435929,3436469;3456001,3456598;3468670,3469417;3471367,3472000;3474538,3475181;3478738,3479312;3497589,3498856;3547295,3548000;3600719,3601631;3619841,3620191;3621440,3622268;3671296,3671780;3673605,3682800;3686745,3687240;3688643,3689101;3696001,3696434;3705561,3706610;3754239,3755364;3764057,3764706;3765127,3765730;3767244,3767791;3769654,3770763;3784190,3785002;3793215,3793757;3812815,3813643;3828108,3828633;3861283,3861942;3894694,3895388;3911081,3911767;3965315,3965981;4004296,4004948;4013213,4013797;4021011,4021746;4024997,4025796;4026787,4027469;4034831,4035457;4036614,4038679;4062667,4063254;4118368,4118842;4121597,4122149;4123340,4124357;4174954,4175466;4176651,4177257;4200070,4201054;4209129,4209679;4212440,4213082;4227745,4228411;4234680,4235245];
@@ -881,10 +897,10 @@ info.R1142N.FR1.session(1).jumps = [8360,8401;8840,8865;12299,12341;13166,13211;
 % Notes: 
 % FINISHED FINISHED
 
-% 'R1147P' - 3    - 40T  - 32F   - 101/559   - 0.1807   - 9T   - 14F   - 69/401 -0.1721                   - :)  - Done. Core.
-% 'R1147P' - 1/3  - 40T  - 32F   - 73/283    - 0.2580   - 9T   - 14F   - 50/204 - 0.2451                    - :)  - 
-% 'R1147P' - 2/3  - 40T  - 32F   - 11/96     - 0.1146   - 9T   - 14F   -   9/70 - 0.12857                   - :)  - 
-% 'R1147P' - 3/3  - 40T  - 32F   - 17/180    - 0.0944   - 9T   - 14F   - 10/127 - 0.078746                   - :)  - 
+% 'R1147P' - 3    - 41T  - 33F   - 101/559   - 0.1807   - 10T   - 14F   - 69/401 -0.1721                   - :)  - Done. Core.
+% 'R1147P' - 1/3  - 41T  - 33F   - 73/283    - 0.2580   - 10T   - 14F   - 50/204 - 0.2451                    - :)  - 
+% 'R1147P' - 2/3  - 41T  - 33F   - 11/96     - 0.1146   - 10T   - 14F   -   9/70 - 0.12857                   - :)  - 
+% 'R1147P' - 3/3  - 41T  - 33F   - 17/180    - 0.0944   - 10T   - 14F   - 10/127 - 0.078746                   - :)  - 
 
 % Dominated by line noise. Cannot tell which channels are broken without prior filtering. 
 % Must be re-referenced prior to line detection.
@@ -911,7 +927,6 @@ info.R1147P.badchan.epileptic = {'LDH2', 'LDA2', 'LMST2', 'LDH3', 'LDA3' ... Kah
     'LPST1' ... % breaks in Session 2
     }; 
 info.R1147P.refchan = {'all'}; %{{'all', '-LSP*', '-LPT*'}, {'LSP*', 'LPT*'}};
-
 % Line Spectra Info:
 % z-thresh 0.5 + 1 manual
 info.R1147P.FR1.bsfilt.peak      = [60  83.2 100 120 140 166.4 180 200 221.4 240 260 280 300 ...
@@ -929,15 +944,12 @@ info.R1147P.FR1.session(2).badsegment = [330001,331747;334835,335130;335762,3365
 info.R1147P.FR1.session(2).jumps = [526105,528000;551589,552752;579315,580554;754101,755380;787448,789453;795210,795981;838408,842401;894678,897147;952582,954066;1052573,1054800;1057553,1058368;1060223,1062570];
 info.R1147P.FR1.session(3).badsegment = [151117,152000;155722,156000;172614,172832;194375,194743;228916,231791;250553,250715;274738,276000;282811,283050;374835,375163;376001,377739;378492,378715;396795,397183;430533,430820;435532,435679;436001,436429;438359,438598;448263,449510;473944,474179;482779,483118;495141,495344;495561,495787;496178,496752;528134,528526;533908,534195;564787,566126;589682,590054;598202,598598;630017,630763;669634,670973;768658,769788;789388,791025;800001,806122;893412,894679;902202,909949;918388,919634;1084299,1084449;1085767,1086663;1110392,1112000;1231915,1233324;1238694,1239062];
 info.R1147P.FR1.session(3).jumps = [496819,498550;543653,544522;559770,561703;639573,640925;808694,810300;881932,883812;884146,886852;892848,894767;909807,915840;969779,971352;1017823,1019396;1089956,1091610;1296815,1298602;1300880,1302590;1332001,1334667;1339778,1340107;1391206,1392312;1461936,1464365;1529541,1531404;1552025,1552933;1554654,1555501;1636122,1638457;1650581,1651118;1661710,1662397];
-
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%% R1149N %%%%%% 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Notes:
 % FINISHED FINISHED
-
-% 'R1149N' - 1    - 39T  - 16F   - 64/300  - 0.2133   - 29T  - 16F - 47/248 - 0.18952                          - ??? - Done. Expansion. 67 recall.
-
+% 'R1149N' - 1    - 47T  - 18F   - 64/300  - 0.2133   - 30T  - 18F - 47/248 - 0.18952                          - ??? - Done. Expansion. 67 recall.
 % ALEX grid is particularly affected by wide line noise, needs to be removed.
 % Remaining channels are slinky, periods of high amp slink that will need to be removed.
 % Lots of intermittently buzzy channels, hopefully got them all. 
@@ -946,7 +958,6 @@ info.R1147P.FR1.session(3).jumps = [496819,498550;543653,544522;559770,561703;63
 % Could be a good subject, but perhaps not enough trials will remain after cleaning.
 % 'AST3', 'AST4', 'MST2', 'MST3', 'MST4', 'OF*', 'TT*', 'LF*', 'G1', 'G2', 'G3', 'G18', 'G19', 'G2', 'G20', 'G26', 'G27', 'G28', 'G29', 'G3', 'G9' ... % buzzy channels
 % IEDs + ambiguous ones, long buzz + ambiguous
-
 % Channel Info:
 info.R1149N.badchan.broken = {'ALEX1', 'ALEX8', 'AST2', ... % flatlines, big fluctuations
     'ALEX*' ... % wide line noise. Not worth saving.
@@ -955,7 +966,6 @@ info.R1149N.badchan.epileptic = {'PST1', 'TT1', 'MST1', 'MST2', 'AST1', ... % Ka
     'TT*' ... % oscillation with spikes
     };
 info.R1149N.refchan = {'all'};
-
 % Line Spectra Info:
 % Session 1/1 z-thresh 0.5 + manual (small)
 % with a bunch of channels removed
@@ -964,29 +974,24 @@ info.R1149N.refchan = {'all'};
 % info.R1149N.FR1.bsfilt.halfbandw = [0.6 0.5 1   0.5   0.5000 0.5000 1.3000 0.5000 0.5000 0.5000 0.5000 0.5000 1.4000 ...
 %     0.5 0.5];
 % info.R1149N.FR1.bsfilt.edge      = 3.0980;
-
 % with only TT* removed
 info.R1149N.FR1.bsfilt.peak      = [60  120 180 196.5 211.7 219.9 220.2 226.8 240 241.9 257.1 272.1 279.9 287.3 300 ...
     105.8 120.9 136];
 info.R1149N.FR1.bsfilt.halfbandw = [0.5 0.5 0.7 0.5   0.5   0.5   0.5   0.5   0.9 0.5   0.5   0.5   0.5   0.5   0.9 ...
     0.5   0.5   0.5];
 info.R1149N.FR1.bsfilt.edge      = 3.1840;
-
 % Bad Segment Info:
 info.R1149N.FR1.session(1).badsegment = [626178,628000;637077,638433;663872,665116;668739,670481;696001,697223;858641,860000;899831,902896;941783,942626;1055847,1057467;1091379,1092000;1113110,1114973;1123113,1123832;1146182,1148776;1151726,1153687;1177662,1178771;1225057,1226062;1278984,1279489;1414081,1414759;1426186,1426985;1578512,1584373;1665872,1666562;1667520,1669143;1673638,1676724;1678476,1680441;1683097,1683485;1692759,1694199;1714654,1715134;1719729,1720392;1752545,1755779;1765972,1767211;1771516,1773115;1806138,1806751;1828344,1830159;1850093,1851892;1857460,1858090;1888424,1888986;1948118,1954360;1959415,1984000;2006940,2007767;2021198,2024000;2099872,2101019;2101571,2102216;2126271,2127243;2136461,2141151;2154206,2155054;2237364,2242969;2295726,2296413;2308001,2308466;2335948,2336341;2348219,2349530;2378589,2387118;2403807,2404252;2495815,2499187;2555407,2556776;2567194,2568000;2586130,2586594;2677013,2680000;2688029,2691703;2696332,2696965;2705638,2706477;2761384,2764000;2772203,2773570;2819835,2820558;2836610,2837232;2910448,2912000;2943081,2944000;2951460,2952000;2984529,2985272;3005372,3006082;3017231,3018763;3021287,3023816;3040162,3040853;3059057,3059715;3084001,3086989;3090202,3095106;3102198,3103614;3104001,3107517;3114633,3118909;3153351,3153901;3158226,3161300;3241307,3241574;3242702,3244000;3260001,3260941;3262766,3264000;3268001,3269764;3276001,3279711;3285190,3289437;3318561,3320000;3320497,3322582;3366658,3369179;3378275,3379001;3457162,3458393;3488670,3489381;3505130,3506804;3526581,3528881];
 info.R1149N.FR1.session(1).jumps = [958198,958663;1554158,1555376;1622210,1623324;2042214,2045187;2549787,2551029;3079750,3080820];
-
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%% R1151E %%%%%% 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Notes:
 % FINISHED FINISHED
-
-% 'R1151E' - 3    - 7T   - 5F    - 208/756   - 0.2751   - 7T   - 5F    -  202/742 -   0.2722               - :)  - Good pending cleaning. Core.
-% 'R1151E' - 1/3  - 7T   - 5F    - 77/300    - 0.2567   - 7T   - 5F    -  76/294 - 0.2585                   - :)  - 
-% 'R1151E' - 2/3  - 7T   - 5F    - 83/300    - 0.2767   - 7T   - 5F    -  81/296 -0.2736                    - :)  - 
-% 'R1151E' - 3/3  - 7T   - 5F    - 48/156    - 0.3077   - 7T   - 5F    -  45/152 -0.2961                    - :)  -
-
+% 'R1151E' - 3    - 7T   - 9F    - 208/756   - 0.2751   - 7T   - 9F    -  202/742 -   0.2722               - :)  - Good pending cleaning. Core.
+% 'R1151E' - 1/3  - 7T   - 9F    - 77/300    - 0.2567   - 7T   - 9F    -  76/294 - 0.2585                   - :)  - 
+% 'R1151E' - 2/3  - 7T   - 9F    - 83/300    - 0.2767   - 7T   - 9F    -  81/296 -0.2736                    - :)  - 
+% 'R1151E' - 3/3  - 7T   - 9F    - 48/156    - 0.3077   - 7T   - 9F    -  45/152 -0.2961                    - :)  -
 % Pretty bad noise specific to surface channels. Re-ref before line spectra helps find sharp spectra.
 % Using combined re-ref for detecting peaks
 % Remaining channels are kinda coherent and slinky, but nothing major.
@@ -995,24 +1000,20 @@ info.R1149N.FR1.session(1).jumps = [958198,958663;1554158,1555376;1622210,162332
 % Great trial number and accuracy, but poor coverage.
 % Exceptionally clean. Barely any IDEs, and no buzz.
 % Lots of tiny spikes. Removing a few with jumps. Probably overkill. 
-
 % TRY THIS SUBJECT FOR PHASE ENCODING. Very curious if channel pairs will be present.
-
 % Channel Info:
 info.R1151E.badchan.broken = {'RPHD8', 'LOFMID1' ... sinusoidal noise and fluctuations, session 1
     };
-
 info.R1151E.badchan.epileptic = {'LAMYD1', 'LAMYD2', 'LAMYD3', 'LAHD1', 'LAHD2', 'LAHD3', 'LMHD1', 'LMHD2', 'LMHD3', ... % Kahana
     }; 
 info.R1151E.refchan = {'all'};
-
 % Line Spectra Info:
 % Lots of line spectra, but baseline is pretty ok. 
 info.R1151E.FR1.bsfilt.peak      = [60  180 210.2 215 220.1 300 ...
     100 120 123.7 139.9 239.9 247.3 260];
 info.R1151E.FR1.bsfilt.halfbandw = [0.5 0.5 0.5   0.5 0.5   0.5 ...
     0.5 0.5 0.5   0.5   0.5   0.5   0.5];
-
+info.R1151E.FR1.bsfilt.edge = 3.1840;
 % Bad Segment Info:
 info.R1151E.FR1.session(1).badsegment = [1158351,1158997;1187480,1188000;2215746,2216458;2442105,2445397;2804473,2804651;2821460,2822175;2936114,2936732;2984501,2984957;3211246,3211896;3236166,3236542;3326883,3326993];
 info.R1151E.FR1.session(1).jumps = [];
@@ -1020,60 +1021,48 @@ info.R1151E.FR1.session(2).badsegment = [443827,444183;580086,580449;592670,5929
 info.R1151E.FR1.session(2).jumps = [2860497,2862203];
 info.R1151E.FR1.session(3).badsegment = [706948,707650;1130569,1131340;1169130,1169619;1211544,1212191;1282444,1282993;1284473,1285469;1379367,1380000;1477158,1477562;1480279,1480764;1507073,1520000];
 info.R1151E.FR1.session(3).jumps = [];
-
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%% R1154D %%%%%% 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Notes:
 % FINISHED FINISHED
-
-% 'R1154D' - 3    - 39T  - 20F   - 271/900   - 0.3011   - 9T  - 19F   - 253/841 -0.3008                      - :)  -  Core.
-% 'R1154D' - 1/3  - 39T  - 20F   - 63/300    - 0.2100   - 9T  - 19F   - 63/300    - 0.2100                     - :)  - 
-% 'R1154D' - 2/3  - 39T  - 20F   - 108/300   - 0.3600   - 9T  - 19F   - 98/263 - 0.37262                     - :)  - 
-% 'R1154D' - 3/3  - 39T  - 20F   - 100/300   - 0.3333   - 9T  - 19F   - 92/278 - 0.33094                     - :)  - 
-
+% 'R1154D' - 3    - 40T  - 20F   - 271/900   - 0.3011   - 10T  - 19F   - 253/841 -0.3008                      - :)  -  Core.
+% 'R1154D' - 1/3  - 40T  - 20F   - 63/300    - 0.2100   - 10T  - 19F   - 63/300    - 0.2100                     - :)  - 
+% 'R1154D' - 2/3  - 40T  - 20F   - 108/300   - 0.3600   - 10T  - 19F   - 98/263 - 0.37262                     - :)  - 
+% 'R1154D' - 3/3  - 40T  - 20F   - 100/300   - 0.3333   - 10T  - 19F   - 92/278 - 0.33094                     - :)  - 
 % No Kahana electrode info available.
-
 % Lots of line spectra, though remaining baseline is flat.
 % Needs LP.
 % Some buzz that can be removed by re-ref.
 % Discrete large events, decent number of slinky channels, decent number of low-amplitude fluctuating channels.
 % Using combined session re-ref for line detection, plus manual adding of other peaks from individual sessions
 % Nothing that makes me distrust this subject.
-
 % Session 2 is corrupt after 2738 seconds.
 % Session 2 still has buzzy episodes after re-ref and LP.
 % Very slinky channels in Session 2, might be worse than Session 1.
-
 % First 242 seconds of Session 3 are corrupted.
 % Session 3 is very buzzy too.
-
 % Buzzy. No IEDs. Jumps help a lot.
-
 % LTCG* saved by re-referencing separately. From 10/19 to 37/19
-
 % Channel Info:
 info.R1154D.badchan.broken = {'LOTD*', 'LTCG23', ... % heavy sinusoidal noise
     'LTCG*', ... % bad line spectra
     'LOFG14' ... % big fluctuations in Session 2
     }; 
-
 info.R1154D.badchan.epileptic = {'LSTG1', ... % intermittent buzz LSTG2
     'LSTG7' ... % oscillation + spikes
     };
 info.R1154D.refchan = {'all'}; % {{'all', '-LTCG*'}, {'LTCG*'}};
-
 % Line Spectra Info: 
 info.R1154D.FR1.bsfilt.peak      = [60 120 138.6 172.3 180 200 218.5 220 222.9 225.1 240 260 280 300 ... % combined z-thresh 0.5
     99.9 140 160 205.9 277.2 ... % manual combined
     111.5 ... % manual session 1
     ]; % 80 196.2]; % tiny one from LTCG
-
 info.R1154D.FR1.bsfilt.halfbandw = [0.5 0.5 0.5  0.5   0.5 0.5 0.5   0.7 2.5   0.5   0.5 0.5 0.5 0.5 ...
     0.5  0.5 0.5 0.5   0.5 ...
     0.5 ...
     ]; % 0.5 0.5];
-
+info.R1154D.FR1.bsfilt.edge = 3.1840;
 % Bad Segment Info:
 info.R1154D.FR1.session(1).badsegment = [492223,495142;2129384,2131856;2332001,2334453;2639109,2642489];
 info.R1154D.FR1.session(1).jumps = [];
@@ -1081,15 +1070,12 @@ info.R1154D.FR1.session(2).badsegment = [228001,229457;334726,338215;348469,3508
 info.R1154D.FR1.session(2).jumps = [226718,228000;884920,886235;927520,928000;1058605,1059509;1060981,1061881;1183407,1184236;1587162,1588611;1772001,1773796;1789372,1789868;1872356,1873542;1881622,1882977;1969730,1971864;2055069,2055896;2090823,2093030;2268340,2269598;2272948,2274389;2276779,2278909;2317388,2317981;2384340,2386776;2388360,2390300;2393303,2393937;2397436,2399308;2469489,2472982;2475351,2476000;2476711,2477945];
 info.R1154D.FR1.session(3).badsegment = [530658,535759;536311,540000;540489,543759;548001,550949;554662,555751;564001,566433;634105,636000;641908,644000;660190,664792;739395,741631;742512,744000;768803,769848;850762,852961;857702,858840;863016,866304;1039299,1040760;1041803,1043848;1073900,1076000;1342823,1348000;1359508,1362655;1530404,1533812;1546299,1548000;1552001,1554078;1556001,1557957;1578654,1579888;1826222,1828000;1856598,1857780;1947226,1950884;1956001,1960000;1970198,1972000;2040001,2040712;2141521,2143078];
 info.R1154D.FR1.session(3).jumps = [757843,758163;1098609,1099606;1254210,1255114;1320565,1320643;1451831,1452994;1643182,1644635;1700001,1700796;1700823,1701453;1761827,1762445;2053440,2055090;2082936,2084804;2161102,2162481;2169501,2171715;2178142,2178812;2196001,2197610;2263024,2266340;2337726,2338723;2376303,2378344;2410408,2411489;2419702,2421086;2488848,2489917;2594811,2594896;2604775,2606393;2613529,2613881;2644082,2644550;2649892,2650937;2674025,2675695;2787081,2788000;2802295,2803751;2893468,2894397;2974492,2975727;2976247,2978965;2988001,2988998;3034464,3035558;3097037,3098207];
-
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%% R1162N %%%%%% 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Notes:
 % FINISHED FINISHED
-
-% 'R1162N' - 1    - 25T  - 11F   - 77/300  - 0.2567   - 17T  - 11F - 75/275 - 0.27273                          - :)  - Done. Expansion. 
-
+% 'R1162N' - 1    - 25T  - 11F   - 77/300  - 0.2567   - 15T  - 11F - 75/275 - 0.27273                          - :)  - Done. Expansion. 
 % No Kahana electrode info available.
 % Very clean, only occassional reference noise across channels. WRONG. I
 % WAS WRONG. VERY SHITTY.
@@ -1099,20 +1085,18 @@ info.R1154D.FR1.session(3).jumps = [757843,758163;1098609,1099606;1254210,125511
 % Not as bad.
 % info.R1162N.badchan.epileptic = {'AST*', 'ATT*' ... % buzzy and synchronous spikes 'PST2', 'PST3'}; % intermittent buzz 
 % Ambiguous swoops and IEDs. Virtually no buzz.
-
 % Channel Info:
 info.R1162N.badchan.broken = {'AST2'};
 info.R1162N.badchan.epileptic = {'AST1', 'AST2', 'AST3', 'ATT3', 'ATT4', 'ATT5', 'ATT6', 'ATT7', 'ATT8', ... % synchronous spikes on bump
     'ATT1' ... % bleed through from depths
     };
 info.R1162N.refchan = {'all'};
-
 % Line Spectra Info:
 info.R1162N.FR1.bsfilt.peak      = [60  120 180 239.5 300 ... % Session 1/1 z-thresh 1
     220]; % manual, tiny tiny peak
 info.R1162N.FR1.bsfilt.halfbandw = [0.5 0.5 0.5 0.5   0.6 ...
     0.5]; % manual, tiny tiny peak
-
+info.R1162N.FR1.bsfilt.edge = 3.1840;
 % Bad Segment Info:
 info.R1162N.FR1.session(1).badsegment = [665485,666054;671935,672472;684932,685498;801243,801659;882766,883167;929392,930578;966887,967247;1047569,1048000;1075238,1075578;1152001,1153074;1163605,1164000;1285791,1286376;1661231,1661727;1671311,1672599;1677069,1677776;1717089,1717699;1741283,1741744;1910355,1911005;1958609,1959223;1960928,1961530;1962738,1964000;2106226,2106707;2127077,2127550;2142617,2143820;2151238,2151876;2419129,2419687;2432590,2433361;2446666,2447263;2584763,2586054;2587617,2588000;2709489,2710042;2712541,2713086];
 info.R1162N.FR1.session(1).jumps = [561726,561768;742081,742792;1422621,1422711;1541863,1543868;1789343,1790780;2755012,2755759;2822920,2823513];
@@ -1121,12 +1105,10 @@ info.R1162N.FR1.session(1).jumps = [561726,561768;742081,742792;1422621,1422711;
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Notes:
 % FINISHED FINISHED
-
-% 'R1166D' - 3    - 5T   - 38F   - 129/900   - 0.1433   - 5T   - 35F   - 124/864 - 0.1435   - :)  - Done. Core. 
-% 'R1166D' - 1/3  - 5T   - 38F   - 30/300    - 0.1000   - 5T   - 35F   - 30/295   - 0.1017    - :)  - 
-% 'R1166D' - 2/3  - 5T   - 38F   - 49/300    - 0.1633   - 5T   - 35F   - 47/280   - 0.16786    - :)  - 
-% 'R1166D' - 3/3  - 5T   - 38F   - 50/300    - 0.1667   - 5T   - 35F   - 47/289 - 0.16263    - :)  - 
-
+% 'R1166D' - 3    - 5T   - 37F   - 129/900   - 0.1433   - 5T   - 19F   - 124/864 - 0.1435   - :)  - Done. Core. 
+% 'R1166D' - 1/3  - 5T   - 37F   - 30/300    - 0.1000   - 5T   - 19F   - 30/295   - 0.1017    - :)  - 
+% 'R1166D' - 2/3  - 5T   - 37F   - 49/300    - 0.1633   - 5T   - 19F   - 47/280   - 0.16786    - :)  - 
+% 'R1166D' - 3/3  - 5T   - 37F   - 50/300    - 0.1667   - 5T   - 19F   - 47/289 - 0.16263    - :)  - 
 % Seizure onset zone "unreported".
 % LFPG seem kinda wonky. Needs re-referencing and LP filter before cleaning. Lots of buzz still.
 % Session 2: maybe some slight buzz and "ropiness" on LFPG temporal channels (24, 30-32).
@@ -1138,7 +1120,6 @@ info.R1162N.FR1.session(1).jumps = [561726,561768;742081,742792;1422621,1422711;
 % Buzzy. No avoiding the buzz.
 % LSFPG* can be re-refed separately. 5/19 to 5/35
 % Adding a couple of things with jumps, but is still very buzzy. Cannot be helped.
-
 % Channel Info:
 info.R1166D.badchan.broken = {'LFPG14', 'LFPG15', 'LFPG16', ... % big deflections
     'LSFPG*', ... % bad line spectra
@@ -1147,14 +1128,12 @@ info.R1166D.badchan.broken = {'LFPG14', 'LFPG15', 'LFPG16', ... % big deflection
 info.R1166D.badchan.epileptic = { ...
     'LFPG5', 'LFPG6', 'LFPG7', 'LFPG8'}; % wonky fluctuations together with one another
 info.R1166D.refchan = {'all'}; % {{'all', '-LSFPG*'}, {'LSFPG*'}};
-
 % Line Spectra Info:
 info.R1166D.FR1.bsfilt.peak      = [60  120 180 200 217.8 218.2 218.8 220.1 223.7 240 300 ...
     100.1 140 160 260 280];
 info.R1166D.FR1.bsfilt.halfbandw = [0.5 0.5 0.5 0.5 0.5   0.5   0.5   0.5   1.6   0.5 0.5 ...
     0.5   0.5 0.5 0.5 0.5];
 info.R1166D.FR1.bsfilt.edge = 3.1840;
-
 % Bad Segment Info:
 info.R1166D.FR1.session(1).badsegment = [20271,22642;467702,472510;607544,607626;620856,622376;717557,722586;1064001,1066534;1160453,1163199;1171198,1175638;1176287,1177518;1284001,1285558;1309480,1311090;1313227,1315408;1331815,1333816;1335637,1335699;1336001,1338006;1429799,1431533;1549158,1552369;1557089,1558671;1771383,1773953;1775274,1776000;1844001,1848000;1878762,1883110;1964831,1968000;1972001,1976000;1976448,1978312;2156372,2158255;2294383,2298634;2310613,2312000;2452001,2452764;2485932,2487384;2500860,2504329;2505428,2505949];
 info.R1166D.FR1.session(2).badsegment = [288505,289856;511186,512486;552888,556736;740001,742570;995629,996635;1220594,1223840;1224791,1226711;1300682,1302066;1304618,1306183;1496368,1497260;1506549,1508000;1654371,1656619;2364372,2366304;2368964,2370860;2465271,2467348;2470170,2472965;2485880,2487541;2576706,2579130;2692783,2694401;2793791,2800925];
@@ -1162,35 +1141,28 @@ info.R1166D.FR1.session(3).badsegment = [498605,500204;634779,636000;732162,7335
 info.R1166D.FR1.session(1).jumps = [575831,576921;610960,614018;2190702,2191429;2672328,2675783;2710670,2711699;2812844,2814324;2917162,2920000;3095794,3096000;3125690,3128000;3132082,3134876;3235432,3238219];
 info.R1166D.FR1.session(2).jumps = [2268211,2269490;2815399,2816000];
 info.R1166D.FR1.session(3).jumps = [315069,315118;636186,636224;908831,908889;1765231,1766921;2077210,2077288;2533468,2547550;2549464,2551179;2680324,2681816;2784134,2785344;2894686,2899029;2948106,2948603;2990299,2992784];
-
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%% R1167M %%%%%% 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Notes:
 % FINISHED FINISHED
-
-% 'R1167M' - 2    - 39T  - 20F   - 166/372   - 0.4462   - 29T  - 18F   - 133/285   - 0.4508 - :)  - Done. Core. 33. Flat slope. 
-% 'R1167M' - 1/2    - 39T  - 20F   - 80/192   - 0.4167   - 29T  - 18F   - 54/127 - 0.4252    - :)  - 
-% 'R1167M' - 2/2    - 39T  - 20F   - 86/180   - 0.4778   - 29T  - 18F   - 79/158 - 0.5    - :)  - 
-
+% 'R1167M' - 2    - 42T  - 21F   - 166/372   - 0.4462   - 32T  - 19F   - 133/285   - 0.4508 - :)  - Done. Core. 33. Flat slope. 
+% 'R1167M' - 1/2    - 42T  - 21F   - 80/192   - 0.4167  - 32T  - 19F   - 54/127 - 0.4252    - :)  - 
+% 'R1167M' - 2/2    - 42T  - 21F   - 86/180   - 0.4778  - 32T  - 19F   - 79/158 - 0.5    - :)  - 
 % Line detection on re-ref. Quite a few little line spectra 80-150Hz. 
 % LPT channels were wonky, so careful if they are the ones showing the effects.
 % Has a bit of buzz still. Could go through and clean these out.
 % Ambiguous IEDs and persistent buzz.
 % Huge IEDs in depths in Session 2 that bleed into surfaces.
 % LAT1-4 have synchronous spikes 
-
 % Channel Info:
 info.R1167M.badchan.broken = {'LP7', ... % sinusoidal noise
     'LP8'}; % spiky and large fluctuations
-
 info.R1167M.badchan.epileptic = {'LP1', 'LAT8', 'LAT11', 'LAT12', 'LAT13', 'LAT16', ... % Kahana
     'LAI1', 'LAI2' ... % high frequency noise on top
      'LPT4', 'LPT5', 'LPT6', 'LPT9' % frequent little spikes. Removed after jumps. Probably could keep, but would need to remove more trials.
     }; 
-
 info.R1167M.refchan = {'all'};
-
 % Line Spectra Info:
 % z-thresh 0.45 + manual on combined re-ref. 
 info.R1167M.FR1.bsfilt.peak      = [60  100.2 120 180 199.9 220.5 240 259.8 280 300 ...
@@ -1198,33 +1170,26 @@ info.R1167M.FR1.bsfilt.peak      = [60  100.2 120 180 199.9 220.5 240 259.8 280 
 info.R1167M.FR1.bsfilt.halfbandw = [0.5 0.5   0.5 0.5 0.5   2.9   0.5 0.8   0.5 0.5 ...
     0.5  0.5  0.5   0.5   0.5 0.5];
 info.R1167M.FR1.bsfilt.edge = 3.1840;
-
 % Bad Segment Info:
 % removing a few more buzzy events
 info.R1167M.FR1.session(1).badsegment = [3574,5023;5468,6466;7684,8419;20092,21001;27678,28668;37140,37356;41003,41646;62699,63278;65901,66791;89033,89431;91999,92000;117221,117660;136656,137620;139916,140708;142906,143850;158062,159796;163129,163485;176904,177536;178280,180360;182616,183404;184374,184726;196840,197115;200702,201207;209113,209972;213277,214219;216001,216449;219404,220959;236920,237300;253114,253582;254158,254578;255641,256000;259244,259901;276787,277252;280757,281423;281884,282380;282387,283598;284780,285743;307205,308623;310029,310469;319716,320842;350932,351009;361291,361631;388969,389514;389527,390109;390130,391017;392979,394052;394845,396647;397072,400425;407347,408154;409368,414888;428844,430280;448796,449321;451728,452340;477097,477888;484158,487566;497791,498131;500888,501232;522440,523038;523476,525796;530239,530838;544917,546668;549464,551091;551159,552783;554487,555525;556390,557297;557584,558549;562140,562842;568202,568926;572646,574098;575718,576623;583653,584163;585261,586133;586674,587743;587840,588728;591693,592906;600541,600942;602554,603178;605148,605853;611812,612292;619218,619861;620621,621442;621464,622324;626484,628000;629243,629816;633465,634036;635083,636000;642791,643106;643690,645336;645339,645810;653232,653797;711488,711820;722954,723589;725126,725578;727312,728000;729960,730945;743640,743893;751424,751848;758970,759971;777323,777768;778730,779134;790460,790860;797517,800663;817089,817441;828001,828835;839301,840492;848726,849310;851048,852000;855561,856405;856565,857369;863818,864484;868917,869466;877763,880000;907337,908687;919839,920226;921205,921545;927640,927896;931485,932478;942456,942856;956811,959122;959125,961379;973484,974176;982567,983157;987855,988357;995021,995686;1018851,1019154;1031196,1031888;1060001,1063199;1064666,1064965;1066766,1067399;1082519,1083262;1084001,1084665;1122833,1123525;1137674,1138074;1140299,1143364;1148001,1148475;1149057,1150058;1150174,1150848;1152001,1153308;1169976,1170328;1220513,1220949;1223363,1224324;1244224,1245262;1258919,1259622;1275375,1276000;1286025,1286638;1296151,1296902;1297925,1298592;1344863,1346254;1346844,1347455;1398360,1398953;1402517,1404732;1413788,1415528;1422408,1423844;1430742,1431880;1439836,1440518;1441744,1442148;1496329,1498259;1503432,1504000;1573672,1574388;1588989,1591699;1594698,1595034;1604001,1604612;1607180,1607904;1637113,1637899;1651157,1651654;1663041,1663916;1704674,1705143;1706114,1706731;1716406,1716609;1720831,1724000;1730910,1732000;1742024,1742603;1750967,1753644;1754001,1754562;1826432,1828000;1833041,1833878;1835602,1836443;1888001,1888449;1914645,1916000;1921750,1922738;1936519,1937198;1938019,1938848;1939298,1939923;1940001,1941873;1952208,1952773;1957008,1957982;1975835,1976458;1977872,1978622;2027457,2027804;2029132,2029418;2037909,2038130;2041406,2041843;2052001,2052515;2055811,2056541;2068847,2069706;2077003,2077808];
 info.R1167M.FR1.session(2).badsegment = [59923,60574;63558,64259;69264,70353;74277,75329;102823,103434;127279,127974;140041,140469;143352,143708;165656,166595;194006,194872;196796,197321;227866,228426;262261,263082;372457,373615;373872,375779;393207,394044;410005,410590;433952,434667;434867,435163;463230,463880;497213,498318;508046,511313;543768,544568;589987,592945;592977,595287;686174,686594;691394,692094;701613,701974;752090,752441;760151,761310;764501,766046;777127,778127;828060,831995;832001,835990;836001,839998;840001,855998;856001,860000;886379,886792;1001275,1003537;1097158,1097691;1115905,1116544;1140001,1140902;1164041,1164953;1212364,1214106;1216001,1217700;1311371,1312212;1348001,1349012;1365110,1365506;1381464,1384353;1400001,1400476;1418069,1418135;1422694,1424957;1447118,1447458;1607836,1608403;1632952,1633012;1654379,1655022;1704256,1706160;1729771,1731679;1776734,1777310;1810319,1812000;1821799,1823014;1832780,1836000;1836288,1838958;1848208,1848875;1859519,1860319];
 info.R1167M.FR1.session(1).jumps = [248489,248534;295774,295828;338404,338993;358871,358909;472827,472889;529452,529490;563936,563973;729053,731231;846428,847356;1265876,1265937;1495851,1495908;1637081,1638219;1718613,1718659;1727371,1727421;1782605,1782659;1790130,1790179;1873863,1873933;1948190,1948252];
 info.R1167M.FR1.session(2).jumps = [617678,617723;1318843,1318888;1414706,1414747;1421859,1421901;1501480,1501510;1606791,1607545];
-
 % Removing more small IEDs, keeping in high amplitude sections w/out IED shape
 % info.R1167M.FR1.session(1).badsegment = [3574,5023;5468,6466;7684,8419;20092,21001;27678,28668;37140,37356;41003,41646;62699,63278;65901,66791;89033,89431;91999,92000;117221,117660;136656,137620;139916,140708;142906,143850;158062,159796;163129,163485;176904,177536;178280,180360;182616,183404;184374,184726;196840,197115;200702,201207;209113,209972;213277,214219;216001,216449;219404,220959;236920,237300;253114,253582;254158,254578;255641,256000;259244,259901;276787,277252;280757,281423;282387,283598;284780,285743;307205,308623;310029,310469;319716,320842;361291,361631;389527,390109;392979,394052;394845,396647;397072,400425;407347,408154;448796,449321;451728,452340;477097,477888;485164,485845;497791,498131;500888,501232;522440,523038;523476,524000;530239,530838;544917,546668;549464,551091;551159,552783;554487,555525;556390,557297;557584,558549;562140,562842;568202,568926;572646,574098;575718,576623;583653,584163;585261,586133;586674,587743;587840,588728;591693,592906;600541,600942;602554,603178;605148,605853;611812,612292;619218,619861;620621,621442;626484,628000;629243,629816;633465,634036;635083,636000;645339,645810;653232,653797;722954,723589;725126,725578;727312,728000;743640,743893;751424,751848;758970,759971;777323,777768;778730,779134;790460,790860;798545,798929;817089,817441;828001,828835;839301,840492;848726,849310;851048,852000;855561,856405;856565,857369;863818,864484;868917,869466;907337,908687;919839,920226;921205,921545;927640,927896;931485,932478;942456,942856;959125,961379;973484,974176;982567,983157;987855,988357;995021,995686;1018851,1019154;1031196,1031888;1064666,1064965;1066766,1067399;1082519,1083262;1084001,1084665;1122833,1123525;1137674,1138074;1141549,1141973;1148001,1148475;1149057,1150058;1169976,1170328;1220513,1220949;1223363,1224324;1244224,1245262;1258919,1259622;1275375,1276000;1286025,1286638;1296151,1296902;1297925,1298592;1344863,1346254;1346844,1347455;1398360,1398953;1413788,1415528;1430742,1431880;1439836,1440518;1441744,1442148;1496329,1498259;1503432,1504000;1573672,1574388;1594698,1595034;1604001,1604612;1607180,1607904;1637113,1637899;1663041,1663916;1704674,1705143;1706114,1706731;1716406,1716609;1721742,1722157;1730910,1732000;1742024,1742603;1750967,1753644;1754001,1754562;1833041,1833878;1835602,1836443;1888001,1888449;1914645,1916000;1921750,1922738;1936519,1937198;1938019,1938848;1939298,1939923;1952208,1952773;1957008,1957982;1975835,1976458;1977872,1978622;2027457,2027804;2029132,2029418;2037909,2038130;2041406,2041843;2052001,2052515;2055811,2056541;2068847,2069706;2077003,2077808];
 % info.R1167M.FR1.session(2).badsegment = [59923,60574;63558,64259;69264,70353;74277,75329;102823,103434;127279,127974;140041,140469;143352,143708;165656,166595;194006,194872;196796,197321;227866,228426;262261,263082;372457,373615;393207,394044;410005,410590;433952,434667;434867,435163;463230,463880;497213,498318;508046,511313;543768,544568;589987,592945;686174,686594;691394,692094;701613,701974;752090,752441;760151,761310;764501,766046;777127,778127;828060,831995;832001,835990;836001,839998;840001,855998;856001,860000;886379,886792;1097158,1097691;1115905,1116544;1140001,1140902;1164041,1164953;1212364,1214106;1216001,1217700;1311371,1312212;1348001,1349012;1365110,1365506;1400001,1400476;1418069,1418135;1447118,1447458;1607836,1608403;1632952,1633012;1654379,1655022;1704256,1706160;1729771,1731679;1776734,1777310;1810319,1812000;1821799,1823014;1832780,1836000;1836288,1838958;1848208,1848875;1859519,1860319];
-
 % info.R1167M.FR1.session(1).badsegment = [3574,5023;5468,6466;7684,8419;20092,21001;27678,28668;37140,37356;41003,41646;62699,63278;65901,66791;89033,89431;91999,92000;117221,117660;136656,137620;139916,140708;142906,143850;158062,159796;163129,163485;176904,177536;178280,180360;182616,183404;184001,185219;209113,209972;213277,214219;219404,220959;259244,259901;270057,270925;280401,281423;282387,283598;284780,285743;307205,308623;319716,320842;389334,390109;392839,394052;394845,396647;397072,400425;407347,408154;410753,411077;448796,449321;451728,452340;470126,471264;477097,477888;484632,485845;497535,498200;530239,531114;544917,546668;549464,551091;551159,552783;554487,555525;556390,557297;557584,558549;562140,562842;568202,568926;572160,574191;575718,576623;583653,584163;585261,586133;587840,588728;591693,592906;600541,600942;602554,603178;605148,605853;606908,607832;611812,612292;616001,616598;619218,619861;620621,621442;626484,630783;633465,634036;635083,636000;645339,645810;653232,653797;715236,716000;721656,722391;722954,723589;727312,728000;743640,743893;758970,759971;774882,776000;828001,828835;839301,840492;848726,849310;851048,852000;863818,864484;868917,869466;883059,883592;907337,908687;919666,920226;921205,921545;927640,927896;931485,932478;959740,961379;972001,972703;973484,974176;982567,983157;995021,995686;1003231,1004000;1031196,1031888;1058946,1060429;1066766,1067399;1082519,1083262;1083661,1085216;1122833,1123525;1141299,1142536;1148001,1148475;1149057,1150058;1157874,1158837;1223363,1224324;1244224,1245262;1258919,1259622;1278387,1279286;1296151,1296902;1297925,1298592;1303105,1304000;1344863,1346254;1346844,1347455;1378288,1380000;1380210,1380905;1398360,1398953;1413788,1415528;1430742,1431880;1439836,1440518;1441744,1442148;1447690,1448192;1448949,1449491;1455724,1457234;1480608,1481886;1496329,1498259;1503299,1504292;1520423,1521429;1568001,1568416;1573672,1574388;1581436,1582313;1586035,1586697;1587339,1587982;1592941,1593603;1601057,1602203;1603220,1604612;1607180,1607904;1613344,1614060;1614766,1615568;1619000,1619560;1637113,1637899;1651049,1652599;1704187,1705249;1706114,1706731;1707254,1708883;1716406,1716609;1721742,1722157;1727302,1728131;1730910,1732190;1742024,1742603;1750967,1753644;1833041,1833878;1835602,1836443;1866556,1867323;1870594,1871616;1873557,1874275;1914645,1916000;1921750,1922738;1936519,1937198;1938019,1938848;1939298,1939923;1952208,1952773;1957008,1957982;1989807,1990248;1992377,1993832;2005624,2007073;2027457,2027804;2029132,2029418;2037909,2038130;2041406,2041843;2052001,2052515;2055811,2056541;2068847,2069706;2077003,2077808];
 % info.R1167M.FR1.session(2).badsegment = [59923,60574;63558,64259;69264,70353;74277,75329;102823,103434;127279,127974;140041,140469;143352,143708;165656,166595;194006,194872;196796,197321;227866,228426;262261,263082;326290,326686;393207,394528;396286,397297;409847,410939;434011,435772;463086,464000;467599,469173;497213,498318;508046,511313;535693,536462;542731,543452;543464,544739;580001,582189;589987,592945;595029,596000;628842,629840;640616,641133;646293,647020;685600,686654;687189,688501;691394,692094;701613,701974;709258,709829;724557,725550;727522,728055;733223,733601;750261,750853;752001,752561;760151,761310;764643,766106;777127,778127;806581,807243;828060,831995;832001,835990;836001,839998;840001,855998;856001,860000;940957,941894;990261,991638;1014148,1014660;1038067,1038590;1097304,1097824;1106930,1107807;1115905,1116544;1121645,1122168;1122869,1124147;1138997,1140902;1142895,1143396;1164041,1164953;1216001,1217700;1220001,1220649;1304001,1304399;1311371,1312212;1329422,1330205;1348001,1349012;1399360,1400948;1447118,1447458;1460001,1460512;1486406,1486987;1505089,1505947;1581997,1582662;1607836,1608403;1632952,1633012;1654379,1655022;1692001,1692558;1704256,1706160;1776734,1777310;1810737,1811420;1821799,1823014;1832780,1836000;1836288,1838958;1848208,1848875;1859519,1860319];
-
 % First cleaning, where I was relatively unaggressive in cleaning out big fluctuations.
 % info.R1167M.FR1.session(1).badsegment = [37142,37344;89033,89429;163129,163469;259250,259900;407368,408122;410755,411081;530291,530437;554512,555489;774886,776472;827947,828821;883069,883578;907727,908612;921239,921429;1082561,1083227;1083681,1085205;1223384,1224281;1345533,1346147;1430762,1431691;1496380,1497558;1607234,1607799;1651123,1652462;1707308,1708777;1866573,1867287;1870621,1871562;1873577,1874239;2037952,2038078];
 % info.R1167M.FR1.session(2).badsegment = [60001,60466;165698,166300;194025,194836;196835,197284;262307,263038;393231,394324;409884,410917;434073,435727;463097,464000;497222,498260;508763,511304;535722,536436;543769,544591;777198,778018;1038105,1038546;1139014,1140845;1164066,1164917;1215904,1217661;1303928,1304374;1348001,1348978;1399379,1400925;1447166,1447384;1654424,1654977;1704279,1706082;1821823,1822985];
-
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%% R1175N %%%%%% 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Notes:
 % FINISHED FINISHED
-
-% 'R1175N' - 1    - 34T  - 30F   - 68/300  - 0.2267   - 24T  - 27F - 57/262 - 0.21756                       - ??? - Done. 73 recall. 
-
+% 'R1175N' - 1    - 39T  - 29F   - 68/300  - 0.2267   - 27T  - 26F - 57/262 - 0.21756                       - ??? - Done. 73 recall. 
 % No Kahana electrode info available.
 % Lots of line noise, but baseline is pretty flat. Some additional, very small lines.
 % Fair amount of reference noise, goes away with re-referencing.
@@ -1237,7 +1202,6 @@ info.R1167M.FR1.session(2).jumps = [617678,617723;1318843,1318888;1414706,141474
 % Could remove more channels in order to get more trials.
 % Was more aggressive in removing channels in order to preserve trials.
 % Removing a bunch of discontinuities using jumps. Looks like most of these are in non-trial data.
-
 % Channel Info:
 info.R1175N.badchan.broken    = {'RAT8', 'RPST2', 'RPST3', 'RPST4', 'RPT6', 'RSM6', 'RAF4'};
 info.R1175N.badchan.epileptic = {'RAT2', 'RAT3', 'RAT4', 'RAT5', 'RAT6' ... % synchronous spike on bump
@@ -1245,14 +1209,12 @@ info.R1175N.badchan.epileptic = {'RAT2', 'RAT3', 'RAT4', 'RAT5', 'RAT6' ... % sy
     'LPST1', 'RAST1', 'RAST2', 'RAST3', 'RAST4' ... % more IEDs
     };
 info.R1175N.refchan = {'all'};
-
 % Line Spectra Info:
 info.R1175N.FR1.bsfilt.peak      = [60  120 180 220 240 280 300.2 ... % Session 1/1 z-thresh 0.5
     159.9 186 200 216.9 259.9]; % manual
 info.R1175N.FR1.bsfilt.halfbandw = [0.6 0.8 1.6 0.5 3   0.5 4.6 ... % Session 1/1 z-thresh 0.5
     0.5   0.5 0.5 0.5   0.5]; % manual
 info.R1175N.FR1.bsfilt.edge      = 3.0460;
-
 % Bad Segment Info:
 info.R1175N.FR1.session(1).badsegment = [1410383,1411227;1428582,1429357;1448287,1449038;1452001,1452316;1454843,1456000;1464174,1464272;1552997,1553344;1554537,1554578;1555782,1555808;1568747,1569155;1569726,1569816;1573239,1573332;1574029,1574110;1584146,1584832;1656358,1658774;1661714,1662376;1704414,1705359;1727085,1727328;1763593,1764000;1766758,1768000;1804082,1805744;1820741,1821056;1824235,1826066;1863363,1863461;1939452,1940000;1943524,1944296;1946424,1947110;1948166,1948752;1951327,1951739;1954460,1955267;2071784,2072000;2106879,2107836;2122956,2124000;2164247,2165074;2176416,2176542;2206444,2207094;2212275,2212304;2214307,2214441;2254488,2255118;2283315,2283715;2294343,2294642;2298202,2298231;2299117,2299316;2321972,2322759;2437932,2438876;2483819,2484288;2485323,2485985;2490303,2491340;2558553,2559977;2567045,2567812;2571153,2572264;2573872,2573941;2595295,2597226;2605255,2606574;2638557,2639134;2690545,2691271;2700912,2701985;2711682,2712510;2714343,2716000;2736001,2736836;2739669,2740454;2759214,2760000;2786940,2788000;2806779,2807558;2814412,2815064;2904864,2904974;2906154,2906247;2920126,2920806;2933747,2934759;2948328,2949199;2978287,2979154;3054541,3055239;3056416,3056897;3059099,3060000;3092162,3093141;3113098,3113723;3132315,3133167;3180779,3181582;3190920,3191614;3194899,3195840;3244219,3244841;3250381,3252000;3262791,3263495;3270662,3271400;3283686,3284000;3286631,3287263;3311295,3312000;3324805,3325631;3376118,3376901;3441988,3443062;3502811,3503219;3556473,3557288;3579109,3579860;3583544,3584264;3598444,3599223;3602125,3603348;3615540,3616000;3649098,3649844;3656384,3657054;3676436,3680000;3691033,3692000;3696001,3716000;3758553,3759062;3763363,3764000;3798440,3799130;3806178,3806808;3820372,3820994;3838670,3839376;3933787,3934292;3958077,3958384;4036384,4037397;4093335,4094018;4102009,4102562;4118936,4119356;4140981,4141490;4187504,4188000;4225077,4226264;4228616,4228818;4232791,4233437;4234436,4234751;4245041,4246630;4264299,4265937;4281892,4283275;4303900,4304977;4306621,4307481;4337222,4337860;4367488,4368000];
 info.R1175N.FR1.session(1).jumps = [1375355,1375416;1417940,1417993;1446488,1446550;1446815,1446872;1447516,1447570;1447629,1447679;1452352,1452393;1453569,1453651;1454795,1454860;1466121,1466227;1470456,1470505;1532694,1532732;1548061,1548099;1548823,1548869;1569162,1569300;1571915,1572000;1574839,1574905;1578315,1578372;1629150,1629256;1652448,1652510;1655561,1656000;1656066,1656155;1658738,1658852;1661485,1661582;1678718,1678767;1686005,1686062;1732408,1732462;1733807,1733856;1741529,1741562;1748771,1748816;1750045,1750332;1750887,1750973;1802061,1802191;1802730,1803058;1803480,1803650;1814146,1814187;1818452,1818518;1819420,1819529;1820283,1820385;1835053,1835304;1849686,1849776;1857573,1857739;1882069,1882143;1973029,1973187;1973589,1973973;1975649,1976502;1978831,1978880;1979315,1979864;1980344,1980712;2017069,2017179;2057549,2057647;2057928,2058022;2066891,2066985;2073650,2073727;2074730,2074804;2075794,2075949;2077214,2077280;2077839,2077941;2081126,2081195;2081380,2081502;2089682,2089788;2094686,2094808;2182770,2182888;2187786,2187928;2190432,2190550;2196211,2196502;2196936,2197050;2199270,2199352;2205622,2205695;2213130,2213211;2213480,2213578;2215936,2216385;2287137,2287247;2294158,2294260;2294706,2294848;2297884,2297989;2312396,2312486;2406327,2407372;2444315,2444417;2452118,2452208;2514093,2514159;2518787,2518836;2528876,2528949;2563020,2563102;2590968,2591054;2592001,2592381;2592694,2592800;2650327,2650389;2657432,2657550;2659625,2659687;2662823,2662921;2666210,2666284;2667174,2667243;2672852,2672913;2675125,2675296;2675823,2675937;2676396,2676478;2679790,2679872;2684848,2685014;2694432,2694518;2708831,2708877;2712396,2712466;2712694,2712756;2712908,2713034;2713533,2713602;2721497,2721574;2727399,2727485;2733928,2734006;2744090,2744167;2744844,2744921;2752223,2752530;2756848,2756893;2760368,2760433;2769057,2769127;2769734,2769897;2771492,2771550;2772948,2773046;2781952,2782030;2786512,2786558;2788203,2788264;2789001,2789115;2790234,2790324;2790762,2790856;2791492,2791650;2810138,2810223;2880533,2880655;2883383,2883453;2884114,2884167;2886533,2886582;2889122,2889207;2905396,2905449;2909037,2909082;2913323,2913449;2960061,2960131;2987178,2987271;3076823,3076869;3076977,3077034;3077960,3078034;3098920,3099126;3099371,3099425;3103540,3103638;3108352,3108389;3110190,3110292;3126041,3126122;3129823,3129945;3203516,3203618;3206944,3207086;3214178,3214215;3239940,3240123;3240755,3240873;3444057,3444139;3446355,3446413;3453609,3453655;3454166,3454251;3458613,3458679;3461319,3462788;3468840,3468913;3475686,3475791;3484001,3484075;3636082,3636280;3689690,3689735;3692001,3696000;4191137,4191215;4231359,4231465];
@@ -1261,12 +1223,6 @@ info.R1175N.FR1.session(1).jumps = [1375355,1375416;1417940,1417993;1446488,1446
 % w/out removing RAT1 and RMF3
 % info.R1175N.FR1.session(1).badsegment = [1369206,1369481;1384110,1384349;1391609,1391799;1410383,1411227;1426375,1427021;1428582,1429357;1446823,1446872;1447520,1447570;1448287,1449038;1452001,1452316;1454843,1456000;1464174,1464272;1467375,1467469;1470827,1471287;1495113,1495223;1518138,1518260;1520541,1520655;1533343,1533449;1537267,1538038;1552997,1553344;1554537,1554578;1555782,1555808;1568747,1569155;1569726,1569816;1573239,1573332;1574029,1574110;1584146,1584832;1621609,1622155;1637501,1637977;1656110,1660000;1661714,1662376;1703815,1704000;1704259,1705554;1727085,1727328;1763593,1764000;1766758,1768000;1774194,1774389;1804082,1805744;1807649,1809042;1811033,1812578;1820924,1821026;1824235,1826066;1845743,1845925;1859936,1860000;1863363,1863461;1936787,1937429;1939452,1940000;1941150,1941598;1943524,1944296;1946424,1947110;1948166,1948752;1951657,1952000;1954460,1955267;2024001,2024998;2027367,2027574;2028001,2029119;2041335,2043110;2068473,2068929;2071020,2072000;2072573,2072889;2082775,2082836;2106879,2107836;2122956,2124000;2124884,2126022;2128001,2129042;2139827,2141707;2146101,2146401;2164247,2165074;2176368,2176909;2206444,2207094;2213118,2215070;2228259,2228978;2244348,2245413;2249323,2249502;2250621,2251025;2254488,2255118;2264827,2265836;2267182,2267868;2283315,2283715;2294343,2294642;2298202,2298231;2299117,2299316;2299379,2299412;2321972,2322759;2323186,2323703;2345630,2346276;2374327,2376000;2378210,2378304;2391690,2392000;2408541,2409191;2435835,2435969;2437932,2438876;2446666,2446836;2483819,2484288;2485323,2485985;2490303,2491340;2502912,2503824;2558553,2559977;2561267,2561357;2567045,2567812;2571153,2572264;2573872,2573941;2595295,2598659;2605255,2606574;2638557,2639134;2690545,2691271;2700912,2701985;2711682,2712510;2714343,2716000;2733674,2734397;2736001,2736836;2739669,2740454;2759214,2760000;2786940,2788000;2806779,2807558;2814412,2816000;2819456,2820000;2834601,2834767;2850303,2850735;2904864,2904974;2906154,2906247;2906710,2907755;2914920,2915090;2920126,2921639;2933747,2934759;2948328,2949199;2958633,2958836;2960743,2961167;2978287,2979154;2980291,2981090;2984001,2984643;3005823,3005925;3038585,3038925;3043867,3044000;3047162,3047275;3048662,3049280;3054541,3055239;3056416,3056897;3058742,3060000;3061867,3062135;3072509,3072889;3092162,3094360;3113098,3113723;3126388,3127005;3131085,3131243;3132315,3133167;3166827,3167332;3180779,3181582;3190920,3191614;3194899,3195840;3205541,3206219;3244219,3244841;3250049,3252000;3262791,3263739;3264380,3264961;3266662,3267211;3270662,3271400;3272678,3273348;3275367,3275707;3283686,3284000;3285279,3285429;3286335,3287263;3295597,3295707;3311295,3312000;3314787,3315154;3317049,3317244;3319327,3319723;3324469,3325631;3346766,3346993;3376118,3376901;3389859,3390268;3394049,3394691;3401984,3402086;3424985,3425764;3430125,3430534;3441988,3443062;3502811,3503219;3504614,3505232;3523698,3524292;3556473,3557288;3579109,3579860;3583544,3584264;3598444,3599223;3602125,3603348;3615540,3616000;3634323,3634622;3643266,3643566;3649098,3649844;3656384,3657054;3676436,3680000;3691033,3692000;3696001,3716000;3717726,3717812;3719718,3719812;3724074,3724486;3743347,3743771;3758553,3759062;3760767,3764000;3766811,3768000;3768981,3769195;3770988,3771848;3776948,3777623;3781743,3782022;3798440,3799130;3806178,3806808;3820372,3820994;3828086,3828707;3832924,3833131;3834742,3835227;3838670,3839376;3850295,3851392;3921541,3921731;3926827,3927005;3933787,3934292;3937996,3938155;3940485,3941481;3942835,3943199;3958077,3958384;3972864,3973542;4036384,4037397;4038770,4039574;4093335,4094018;4102009,4102562;4117589,4117873;4118936,4119356;4140981,4141490;4146908,4147727;4172001,4173300;4183432,4184000;4187504,4188264;4189569,4189792;4225077,4226264;4228533,4228873;4232791,4233437;4234436,4234751;4245041,4246630;4252098,4252462;4264299,4265937;4281892,4283275;4297609,4298340;4303900,4304977;4306621,4307481;4313702,4314171;4329331,4329921;4337222,4337860;4367488,4368000;4369388,4370586;4397323,4398348];
 end
-
-
-
-
-
-
 
 
 
@@ -1296,7 +1252,6 @@ end
 %     0.5]; % manual
 % 
 % % Bad Segment Info:
-
 % %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % %%%%%% R1100D %%%%%% 
 % %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1313,7 +1268,6 @@ end
 %     }; 
 % 
 % % Line Spectra Info:
-
 % Bad Segment Info:
 % %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % %%%%%% R1129D %%%%%%
@@ -1327,7 +1281,6 @@ end
 %     };
 % info.R1129D.badchan.epileptic = {
 %     }; 
-
 % %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % %%%%%% R1155D %%%%%% 
 % %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1340,7 +1293,6 @@ end
 %     };
 % info.R1155D.badchan.epileptic = {
 %     }; 
-
 % %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % %%%%%% R1156D %%%%%% 
 % %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1378,7 +1330,6 @@ end
 % [60 100 120 140 179.4000 180 200 219.9000 224.9000 240 260.1000 269.8000 280 300 ...
 %     79.7 112.4 160.1 172.3];
 % [0.5000 0.5000 0.5000 0.7000 0.5000 0.7000 0.5000 1 0.5000 0.5000 1.1000 0.5000 0.5000 0.5000];
-
 % %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % %%%%%% R1159P %%%%%% 
 % %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1394,17 +1345,7 @@ end
 % 
 % info.R1159P.badchan.epileptic = {'RDA1', 'RDA2', 'RDA3', 'RDA4', 'RDH1', 'RDH2', 'RDH3', 'RDH4' ... % Kahana
 %     };
-
-
 % origunclean = {'R1162N', 'R1033D', 'R1156D', 'R1149N', 'R1175N', 'R1154D', 'R1068J', 'R1159P', 'R1080E', 'R1135E', 'R1147P'};
-
-
-
-
-
-
-
-
 %%%%%% R1068J %%%%%
 % Looks funny, but relatively clean. Reference noise in grids RPT and RF go
 % haywire by themselves, might need to re-reference individually.
@@ -1413,4 +1354,34 @@ end
 % info.R1068J.FR1.session(3).badchan.broken = {'RAMY7', 'RAMY8', 'RATA1', 'RPTA1'};
 
 
+% 'R1128E' - 1    - 8T   - 10F   - 141/300   - 0.4700   - 4T   - 9F    - 134/276   - 0.48551  - :)  - Done. Core. 26. 147 recall. 
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%% R1128E %%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Notes:
+
+% 'R1128E' - 1    - 8T   - 10F   - 141/300   - 0.4700   - 4T - 9F    - 134/276 - 0.48551   - :) - Done. Core. 26. 147 recall. 
+
+% Mostly depth electrodes. Very frequency epileptic events that are present
+% in temporal grids.
+% Ambiguous IEDs, not sure if I got them all OR if I was too aggressive. 
+% RANTTS5 is mildly buzzy, but keeping in
+
+% Not great for phase encoding.
+
+% Channel Info:
+info.R1128E.badchan.broken = {'RTRIGD10', 'RPHCD9', ... % one is all line noise, the other large deviations
+    };
+info.R1128E.badchan.epileptic = {'RANTTS1', 'RANTTS2', 'RANTTS3', 'RANTTS4', ... % synchronous swoops with spikes on top
+    'RINFFS1'}; % marked as bad by Kahana Lab
+info.R1128E.refchan = {'all'};
+
+% Line Spectra Info:
+info.R1128E.FR1.bsfilt.peak      = [60  179.9 239.8 299.7];
+info.R1128E.FR1.bsfilt.halfbandw = [0.5 0.5   0.5   0.7];
+info.R1128E.FR1.bsfilt.edge      = 3.1852;
+
+% Bad Segment Info:
+info.R1128E.FR1.session(1).badsegment = [240728,241107;278500,278928;339661,340117;366194,366654;377155,377797;457180,457435;462388,462852;472334,473000;487250,487512;751091,751673;778825,779287;811298,811903;851544,852080;856877,857482;945783,947052;1056745,1057354;1059291,1060215;1062937,1063458;1067803,1068927;1081370,1081596;1088020,1089028;1122046,1122559;1211260,1212163;1280042,1280526;1306023,1306692;1571722,1572790;1638470,1638894;1703062,1703764;1710123,1710551;1815353,1816167;1816803,1817247;1819425,1819849;1911358,1911874;1939914,1940656;2038859,2039464;2133429,2133864;2323550,2324143;2331405,2331849;2333257,2333664;2338720,2339212;2341287,2342142;2384541,2384808;2675600,2676282;2676897,2677320;2906172,2906769];
+info.R1128E.FR1.session(1).jumps = [844877,847152;1502497,1507730;1510489,1514484;1659364,1660412;1669905,1670328];
