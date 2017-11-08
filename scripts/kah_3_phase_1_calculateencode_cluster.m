@@ -4,8 +4,8 @@ clear; clc
 info = struct;
 info.subj = {'R1020J' 'R1032D' 'R1033D' 'R1034D' 'R1045E' 'R1059J' 'R1075J' 'R1080E' 'R1120E' 'R1135E' ...
     'R1142N' 'R1147P' 'R1149N' 'R1151E' 'R1154D' 'R1162N' 'R1166D' 'R1167M' 'R1175N'};
-% info.path.processed.cluster = '/projects/ps-voyteklab/tamtra/data/KAH/';
-info.path.processed.cluster = '/Volumes/voyteklab/tamtra/data/KAH/';
+info.path.processed.cluster = '/projects/ps-voyteklab/tamtra/data/KAH/';
+% info.path.processed.cluster = '/Volumes/voyteklab/tamtra/data/KAH/';
 
 % Set experiment.
 experiment = 'FR1';
