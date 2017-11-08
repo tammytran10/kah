@@ -96,9 +96,9 @@ for isubj = 1:numel(info.subj)
     info.hand(isubj) = deminfo{12}(strcmpi(info.subj{isubj}, deminfo{1}));
 end
 
-% Load anatomical atlases used for electrode region labelling.
-talatlas = ft_read_atlas([info.path.src 'atlasread/TTatlas+tlrc.HEAD']);
-mniatlas = ft_read_atlas([info.path.src 'atlasread/ROI_MNI_V4.nii']);
+% % Load anatomical atlases used for electrode region labelling.
+% talatlas = ft_read_atlas([info.path.src 'atlasread/TTatlas+tlrc.HEAD']);
+% mniatlas = ft_read_atlas([info.path.src 'atlasread/ROI_MNI_V4.nii']);
 
 % For each subject, extract anatomical, channel, and electrophysiological info.
 for isubj = 1:numel(info.subj)
