@@ -190,8 +190,21 @@ for isubj = 1:numel(info.subj)
         temporalterms = {'temporal', 'fusiform', 'hippocamp', 'bankssts', 'entorhinal'};
         
         % Determine lobe location based on individual labels only.
-        frontal = contains(indlabel, frontalterms);
-        temporal = contains(indlabel, temporalterms);
+%         frontal = contains(indlabel, frontalterms);
+%         temporal = contains(indlabel, temporalterms);
+        frontal = 0; temporal = 0;
+        
+        for ifterm = 1:length(frontalterms)
+            if ~isempty(strfind(indlabel, frontalterms{ifterm}))
+                frontal = 1;
+            end
+        end
+        
+        for itterm = 1:length(temporalterms)
+            if ~isempty(strfind(indlabel, temporalterms{itterm}))
+                temporal = 1;
+            end
+        end
         
         if frontal
             info.(subject).allchan.lobe{ichan} = 'F';
@@ -201,33 +214,34 @@ for isubj = 1:numel(info.subj)
             info.(subject).allchan.lobe{ichan} = 'NA';
         end
         
-        % Determine lobe location based on majority vote across individual, MNI, and TAL.
-        regions = {indlabel, mnilabel, tallabel};
-        frontal = contains(regions, frontalterms);
-        temporal = contains(regions, temporalterms);
-        nolabel = strcmpi('NA', regions);
-        
-        if sum(frontal) > (sum(~nolabel)/2)
-            info.(subject).allchan.altlobe{ichan} = 'F';
-        elseif sum(temporal) > (sum(~nolabel)/2)
-            info.(subject).allchan.altlobe{ichan} = 'T';
-        else
-            info.(subject).allchan.altlobe{ichan} = 'NA';
-        end
+%         % Determine lobe location based on majority vote across individual, MNI, and TAL.
+%         regions = {indlabel, mnilabel, tallabel};
+%         frontal = contains(regions, frontalterms);
+%         temporal = contains(regions, temporalterms);
+%         nolabel = strcmpi('NA', regions);
+%         
+%         if sum(frontal) > (sum(~nolabel)/2)
+%             info.(subject).allchan.altlobe{ichan} = 'F';
+%         elseif sum(temporal) > (sum(~nolabel)/2)
+%             info.(subject).allchan.altlobe{ichan} = 'T';
+%         else
+%             info.(subject).allchan.altlobe{ichan} = 'NA';
+%         end
     end
     
     % Re-format to column vectors.
     info.(subject).allchan.type = info.(subject).allchan.type(:);
     info.(subject).allchan.lobe = info.(subject).allchan.lobe(:);
-    info.(subject).allchan.altlobe = info.(subject).allchan.altlobe(:);
+%     info.(subject).allchan.altlobe = info.(subject).allchan.altlobe(:);
     for iatlas = 1:length(atlases)
         info.(subject).allchan.(atlases{iatlas}).region = info.(subject).allchan.(atlases{iatlas}).region(:);
     end
     
     % Get experiments performed.
     experiments = extractfield(dir([subjpathcurr 'experiments/']), 'name');
-    experiments(contains(experiments, '.')) = [];
-    
+%     experiments(contains(experiments, '.')) = [];
+    experiments(ismember(experiments, {'.', '..', '.DS_Store'})) = [];
+
     % Get experiment path info.
     for iexp = 1:numel(experiments)
         % Get current experiment path.
@@ -236,8 +250,9 @@ for isubj = 1:numel(info.subj)
         
         % Get session numbers.
         sessions = extractfield(dir(exppathcurr), 'name');
-        sessions(contains(sessions, '.')) = [];
-        
+%         sessions(contains(sessions, '.')) = [];
+        sessions(ismember(sessions, {'.', '..', '.DS_Store'})) = [];
+
         % Get header file, data directory, and event file per session.
         for isess = 1:numel(sessions)
             info.(subject).(expcurr).session(isess).headerfile = [exppathcurr sessions{isess} '/behavioral/current_processed/index.json'];
