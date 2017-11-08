@@ -28,12 +28,15 @@ info.path.src = '/Users/Rogue/Documents/Research/Projects/KAH/src/';
 
 % Set path to Kahana folder on shared VoytekLab server.
 hdpath = '/Volumes/DATAHD/KAHANA/';
-clusterpath = '/Volumes/voyteklab/common/data2/kahana_ecog_RAMphase1/';
+clusterpath1 = '/Volumes/voyteklab/common/data2/kahana_ecog_RAMphase1/';
+clusterpath2 = '/projects/ps-voyteklab/common/data2/kahana_ecog_RAMphase1/';
 
 % Use the cluster path if info for all subjects is desired.
 if nargin > 0
-    if exist(clusterpath, 'dir')
-        info.path.kah = clusterpath;
+    if exist(clusterpath1, 'dir')
+        info.path.kah = clusterpath1;
+    elseif exist(clusterpath2, 'dir')
+        info.path.kah = clusterpath2;
     else
         error('To load info for all subjects, cluster storage must be available.')
     end
@@ -42,8 +45,10 @@ if nargin > 0
 else    
     if exist(hdpath, 'dir')
         info.path.kah = hdpath;
-    elseif exist(clusterpath, 'dir')
-        info.path.kah = clusterpath;
+    elseif exist(clusterpath1, 'dir')
+        info.path.kah = clusterpath1;
+    elseif exist(clusterpath2, 'dir')
+        info.path.kah = clusterpath2;
     else
         error('Neither your personal hard drive nor cluster storage is available.')
     end
