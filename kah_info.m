@@ -28,15 +28,12 @@ info.path.src = '/Users/Rogue/Documents/Research/Projects/KAH/src/';
 
 % Set path to Kahana folder on shared VoytekLab server.
 hdpath = '/Volumes/DATAHD/KAHANA/';
-clusterpath1 = '/Volumes/voyteklab/common/data2/kahana_ecog_RAMphase1/';
-clusterpath2 = '/projects/ps-voyteklab/common/data2/kahana_ecog_RAMphase1/';
+clusterpath = '/Volumes/voyteklab/common/data2/kahana_ecog_RAMphase1/';
 
 % Use the cluster path if info for all subjects is desired.
 if nargin > 0
-    if exist(clusterpath1, 'dir')
-        info.path.kah = clusterpath1;
-    elseif exist(clusterpath2, 'dir')
-        info.path.kah = clusterpath2;
+    if exist(clusterpath, 'dir')
+        info.path.kah = clusterpath;
     else
         error('To load info for all subjects, cluster storage must be available.')
     end
@@ -45,10 +42,8 @@ if nargin > 0
 else    
     if exist(hdpath, 'dir')
         info.path.kah = hdpath;
-    elseif exist(clusterpath1, 'dir')
-        info.path.kah = clusterpath1;
-    elseif exist(clusterpath2, 'dir')
-        info.path.kah = clusterpath2;
+    elseif exist(clusterpath, 'dir')
+        info.path.kah = clusterpath;
     else
         error('Neither your personal hard drive nor cluster storage is available.')
     end
@@ -96,9 +91,9 @@ for isubj = 1:numel(info.subj)
     info.hand(isubj) = deminfo{12}(strcmpi(info.subj{isubj}, deminfo{1}));
 end
 
-% % Load anatomical atlases used for electrode region labelling.
-% talatlas = ft_read_atlas([info.path.src 'atlasread/TTatlas+tlrc.HEAD']);
-% mniatlas = ft_read_atlas([info.path.src 'atlasread/ROI_MNI_V4.nii']);
+% Load anatomical atlases used for electrode region labelling.
+talatlas = ft_read_atlas([info.path.src 'atlasread/TTatlas+tlrc.HEAD']);
+mniatlas = ft_read_atlas([info.path.src 'atlasread/ROI_MNI_V4.nii']);
 
 % For each subject, extract anatomical, channel, and electrophysiological info.
 for isubj = 1:numel(info.subj)
@@ -190,21 +185,8 @@ for isubj = 1:numel(info.subj)
         temporalterms = {'temporal', 'fusiform', 'hippocamp', 'bankssts', 'entorhinal'};
         
         % Determine lobe location based on individual labels only.
-%         frontal = contains(indlabel, frontalterms);
-%         temporal = contains(indlabel, temporalterms);
-        frontal = 0; temporal = 0;
-        
-        for ifterm = 1:length(frontalterms)
-            if ~isempty(strfind(indlabel, frontalterms{ifterm}))
-                frontal = 1;
-            end
-        end
-        
-        for itterm = 1:length(temporalterms)
-            if ~isempty(strfind(indlabel, temporalterms{itterm}))
-                temporal = 1;
-            end
-        end
+        frontal = contains(indlabel, frontalterms);
+        temporal = contains(indlabel, temporalterms);
         
         if frontal
             info.(subject).allchan.lobe{ichan} = 'F';
@@ -214,34 +196,33 @@ for isubj = 1:numel(info.subj)
             info.(subject).allchan.lobe{ichan} = 'NA';
         end
         
-%         % Determine lobe location based on majority vote across individual, MNI, and TAL.
-%         regions = {indlabel, mnilabel, tallabel};
-%         frontal = contains(regions, frontalterms);
-%         temporal = contains(regions, temporalterms);
-%         nolabel = strcmpi('NA', regions);
-%         
-%         if sum(frontal) > (sum(~nolabel)/2)
-%             info.(subject).allchan.altlobe{ichan} = 'F';
-%         elseif sum(temporal) > (sum(~nolabel)/2)
-%             info.(subject).allchan.altlobe{ichan} = 'T';
-%         else
-%             info.(subject).allchan.altlobe{ichan} = 'NA';
-%         end
+        % Determine lobe location based on majority vote across individual, MNI, and TAL.
+        regions = {indlabel, mnilabel, tallabel};
+        frontal = contains(regions, frontalterms);
+        temporal = contains(regions, temporalterms);
+        nolabel = strcmpi('NA', regions);
+        
+        if sum(frontal) > (sum(~nolabel)/2)
+            info.(subject).allchan.altlobe{ichan} = 'F';
+        elseif sum(temporal) > (sum(~nolabel)/2)
+            info.(subject).allchan.altlobe{ichan} = 'T';
+        else
+            info.(subject).allchan.altlobe{ichan} = 'NA';
+        end
     end
     
     % Re-format to column vectors.
     info.(subject).allchan.type = info.(subject).allchan.type(:);
     info.(subject).allchan.lobe = info.(subject).allchan.lobe(:);
-%     info.(subject).allchan.altlobe = info.(subject).allchan.altlobe(:);
+    info.(subject).allchan.altlobe = info.(subject).allchan.altlobe(:);
     for iatlas = 1:length(atlases)
         info.(subject).allchan.(atlases{iatlas}).region = info.(subject).allchan.(atlases{iatlas}).region(:);
     end
     
     % Get experiments performed.
     experiments = extractfield(dir([subjpathcurr 'experiments/']), 'name');
-%     experiments(contains(experiments, '.')) = [];
-    experiments(ismember(experiments, {'.', '..', '.DS_Store'})) = [];
-
+    experiments(contains(experiments, '.')) = [];
+    
     % Get experiment path info.
     for iexp = 1:numel(experiments)
         % Get current experiment path.
@@ -250,9 +231,8 @@ for isubj = 1:numel(info.subj)
         
         % Get session numbers.
         sessions = extractfield(dir(exppathcurr), 'name');
-%         sessions(contains(sessions, '.')) = [];
-        sessions(ismember(sessions, {'.', '..', '.DS_Store'})) = [];
-
+        sessions(contains(sessions, '.')) = [];
+        
         % Get header file, data directory, and event file per session.
         for isess = 1:numel(sessions)
             info.(subject).(expcurr).session(isess).headerfile = [exppathcurr sessions{isess} '/behavioral/current_processed/index.json'];
