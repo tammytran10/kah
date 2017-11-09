@@ -60,7 +60,7 @@ for isubj = 1:length(info.subj)
         end
 
         qsubcellfun('kah_calculatephaseencode', datA, datB, encoding, type, outputfile, ...
-            'backend', 'torque', 'queue', 'hotel', 'timreq', 60*60*100, 'matlabcmd', '/opt/matlab/2015a/bin/matlab', 'stack', 100, 'options', '-V -k oe ', 'sleep', 30)
+            'backend', 'torque', 'queue', 'hotel', 'timreq', 60*60*100, 'matlabcmd', '/opt/matlab/2015a/bin/matlab', 'stack', 100, 'options', '-V -k oe ', 'sleep', 30, 'memreq', 2e9)
     end
 end
 disp('Done.')
