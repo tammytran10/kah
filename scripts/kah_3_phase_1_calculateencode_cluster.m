@@ -5,6 +5,7 @@ subjects = {'R1020J' 'R1032D' 'R1033D' 'R1034D' 'R1045E' 'R1059J' 'R1075J' 'R108
     'R1142N' 'R1147P' 'R1149N' 'R1151E' 'R1154D' 'R1162N' 'R1166D' 'R1167M' 'R1175N'};
 clusterpath = '/projects/ps-voyteklab/tamtra/data/KAH/';
 experiment = 'FR1';
+timewin = [-800, 1600];
 
 % Set whether to permute trials or not.
 dopermute = 0;
@@ -17,7 +18,14 @@ else
     nperm = 1;
 end
 
-timewin = [-800, 1600];
+% Pre-allocate input to qsubcellfun.
+[datA, datB, encoding, type, outputfile] = deal({});
+        
+% Set true if just testing one run
+testrun = 1;
+
+% Change these params for non test runs.
+stack = 40; timreq = 90; memreq = 0.05 * 1024^3;
 
 for isubj = 1
     % Get current subject identifier.
@@ -33,30 +41,34 @@ for isubj = 1
     % Get all unique pairs of channels. 
     chanpairs = nchoosek(1:nchan, 2);    
     nchanpair = size(chanpairs, 1);
-    nchanpair = 1;
+    if testrun
+        nchanpair = 1;
+    end
     
-    for iperm = 1
-        % Pre-allocate input to qsubcellfun.
-        [datA, datB, encoding, type, outputfile] = deal(cell(nchanpair, 1));
-
+    for iperm = 1:nperm
         % Specify inputs to kah_subfunc_phaseencode per channel pair. 
-        for ipair = 1
+        for ipair = 1:nchanpair
             channums = chanpairs(ipair, :);
-            datA{ipair} = [clusterpath 'thetaphase/' subject '_' experiment '_thetaphase_' num2str(channums(1)) '.mat'];
-            datB{ipair} = [clusterpath 'thetaphase/' subject '_' experiment '_thetaphase_' num2str(channums(2)) '.mat'];
-            type{ipair} = 'cmtest'; % change for different test types.
-
+            datA = [datA; [clusterpath 'thetaphase/' subject '_' experiment '_thetaphase_' num2str(channums(1)) '.mat']];
+            datB = [datB; [clusterpath 'thetaphase/' subject '_' experiment '_thetaphase_' num2str(channums(2)) '.mat']];
+            type = [type; 'cmtest'];
+            
             if dopermute
-                encoding{ipair} = permtrials{isubj, iperm};
-                outputfile{ipair} = [clusterpath subject '_FR1_phaseencode_' type{ipair} '_' num2str(timewin(1)) '_' num2str(timewin(2)) '_pair_' num2str(ipair) '_resamp_' num2str(iperm) '.mat'];
+                encoding = [encoding; permtrial{isubj, iperm}];
+                outputfile = [outputfile; [clusterpath subject '_FR1_phaseencode_' type{ipair} '_' num2str(timewin(1)) '_' num2str(timewin(2)) '_pair_' num2str(ipair) '_resamp_' num2str(iperm) '.mat']];
             else
-                encoding{ipair} = [];
-                outputfile{ipair} = [clusterpath subject '_FR1_phaseencode_' type{ipair} '_' num2str(timewin(1)) '_' num2str(timewin(2)) '_pair_' num2str(ipair) '_nosamp.mat'];
+                encoding = [encoding; {[]}];
+                outputfile = [outputfile; [clusterpath subject '_FR1_phaseencode_' type{ipair} '_' num2str(timewin(1)) '_' num2str(timewin(2)) '_pair_' num2str(ipair) '_nosamp.mat']];
             end
         end
-
-        qsubcellfun('kah_calculatephaseencode', datA, datB, encoding, type, outputfile, ...
-            'backend', 'torque', 'queue', 'hotel', 'timreq', 200, 'stack', 1, 'matlabcmd', '/opt/matlab/2015a/bin/matlab', 'options', '-V -k oe ', 'sleep', 30, 'memreq', 0.05*1024^3)
     end
 end
+
+% Max out time and mem requests for test run.
+if testrun
+    timreq = 28800; stack = 1; memreq = 4 * 1024^3;
+end
+
+qsubcellfun('kah_calculatephaseencode', datA, datB, encoding, type, outputfile, ...
+            'backend', 'torque', 'queue', 'hotel', 'timreq', timreq, 'stack', stack, 'matlabcmd', '/opt/matlab/2015a/bin/matlab', 'options', '-V -k oe ', 'sleep', 30, 'memreq', memreq)
 disp('Done.')
