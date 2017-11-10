@@ -24,7 +24,7 @@ info.subjsubset = {'R1020J' 'R1032D' 'R1033D' 'R1034D' 'R1045E' 'R1059J' 'R1075J
     'R1142N' 'R1147P' 'R1149N' 'R1151E' 'R1154D' 'R1162N' 'R1166D' 'R1167M' 'R1175N'};
     
 % Set path to where source files are.
-info.path.src = '/Users/Rogue/Documents/Research/Projects/KAH/src/';
+info.path.src = '/Users/Rogue/Documents/Research/Projects/KAH/code/';
 
 % Set path to Kahana folder on shared VoytekLab server.
 hdpath = '/Volumes/DATAHD/KAHANA/';
@@ -63,7 +63,7 @@ info.path.surf = [info.path.kah 'session_data/surfaces/'];
 
 % Set path to where processed data will be saved.
 info.path.processed.hd      = '/Volumes/DATAHD/Active/KAH/';
-info.path.processed.cluster = '/Volumes/voyteklab/tamtra/KAH/';
+info.path.processed.cluster = '/Volumes/voyteklab/tamtra/data/KAH/';
 
 % Get info from demographic file.
 demfile = fopen(info.path.demfile);
