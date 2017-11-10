@@ -6,10 +6,10 @@ info = kah_info;
 %%
 clearvars('-except', 'info')
 
-testtype = 'wwtest'; % options corrcl, wwtest, and cmtest
+testtype = 'cmtest'; % options corrcl, wwtest, and cmtest
 
 %%
-if isempty(gcp), parpool('local', 2); end % open up second pool
+% if isempty(gcp), parpool('local', 2); end % open up second pool
 
 % Set experiment.
 experiment = 'FR1';
@@ -39,6 +39,7 @@ for isubj = 1:length(info.subj)
     % remembered/forgotten.
     for ipair = 1:nchanpair
         disp([num2str(isubj) ' ' subject ' ' num2str(ipair) '/' num2str(nchanpair)])
+        
         datA = squeeze(dat(chanpairs(ipair, 1),:,:));
         datB = squeeze(dat(chanpairs(ipair, 2),:,:));
         
