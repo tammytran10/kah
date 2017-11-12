@@ -15,6 +15,7 @@ experiment = 'FR1';
 nperm = 100;
 ntrialsub = 20;
 
+% For trial indices of subsets.
 subtrials = nan(length(info.subj), 2, nperm, ntrialsub);
 
 for isubj = 1:length(info.subj)
@@ -24,15 +25,14 @@ for isubj = 1:length(info.subj)
     disp([num2str(isubj) ' ' subject])
     
     % Load subject HFA data.
-    load([info.path.processed subject '_' experiment '_hfa_-800_1600.mat'], 'hfa')
-          
+    [~, trialinfo] = kah_loadftdata(info, subject, 'hfa', [-800, 1600], 0);
     for iperm = 1:nperm        
         for icorrect = 1:2           
-            trialcurr = hfa.trialinfo(:, 3) == (2 - icorrect); % correct vs. incorrect (in that order)
+            trialcurr = trialinfo(:, 3) == (2 - icorrect); % correct vs. incorrect (in that order)
             subtrials(isubj, icorrect, iperm, :) = randperm(sum(trialcurr), ntrialsub);   
         end       
     end
 end
 
-save([info.path.processed experiment '_trialsubsets_default_pac.mat'], 'subtrials')
+save([info.path.processed.hd experiment '_trialsubsets_default_pac.mat'], 'subtrials')
 disp('Done.')
