@@ -24,7 +24,7 @@ for isubj = 1:length(info.subj)
     timewin = [-800, 1600]; % ms
     
     % Skip subject if all permutations have already been run. 
-    if exist([info.path.processed.hd subject '_' experiment '_pac_between_' num2str(timewin(1)) '_' num2str(timewin(2)) '_resamp_' num2str(nperm) '.mat'], 'file')
+    if exist([info.path.processed.hd subject '_' experiment '_pac_between_er_' num2str(timewin(1)) '_' num2str(timewin(2)) '_resamp_' num2str(nperm) '.mat'], 'file')
         disp(['Skipping ' subject])
         continue
     end
@@ -50,12 +50,12 @@ for isubj = 1:length(info.subj)
                 phasecurr = squeeze(thetaphase(ichan, :, trialcurr));
                 ampcurr = squeeze(hfaamp(ichan, :, trialcurr));
                 for isamp = 1:nsamp
-                    pacwithin(ichan, isamp, icorrect, iperm) = abs(sum(ampcurr(isamp, subtrialcurr) .* exp(1i .* phasecurr(isamp, subtrialcurr)))) / (sqrt(ntrialsub) * sqrt(sum(ampcurr(isamp, subtrialcurr) .^ 2)));
+                    pacwithin(ichan, isamp, icorrect, iperm) = pac_calculateozkurt(phasecurr(isamp, subtrialcurr), ampcurr(isamp, subtrialcurr));
                 end
             end           
         end
     end
-    save([info.path.processed.hd subject '_' experiment '_pac_within_' num2str(timewin(1)) '_' num2str(timewin(2)) '_resamp.mat'], 'pacwithin', 'times', 'trialinfo', 'chans')
+    save([info.path.processed.hd subject '_' experiment '_pac_within_er_' num2str(timewin(1)) '_' num2str(timewin(2)) '_resamp.mat'], 'pacwithin', 'times', 'trialinfo', 'chans')
     clear pacwithin
         
     % Get all unique pairs of channels.
@@ -65,7 +65,7 @@ for isubj = 1:length(info.subj)
     % Calculate between-channel PAC in both directions for all channel pairs and trial subsets.
     for iperm = 1:nperm
         % Skip permutation if already run.
-        filecurr = [info.path.processed.hd subject '_' experiment '_pac_between_' num2str(timewin(1)) '_' num2str(timewin(2)) '_resamp_' num2str(iperm) '.mat'];
+        filecurr = [info.path.processed.hd subject '_' experiment '_pac_between_er_' num2str(timewin(1)) '_' num2str(timewin(2)) '_resamp_' num2str(iperm) '.mat'];
         if exist(filecurr, 'file')
             disp(['Skipping ' subject ' ' num2str(iperm) '/' num2str(nperm)])
             continue
@@ -95,7 +95,7 @@ for isubj = 1:length(info.subj)
                     
                     % Calculate PAC across trials per sample.
                     for isamp = 1:nsamp
-                        pacbetween(ipair, isamp, idirection, icorrect) = abs(sum(ampcurr(isamp, subtrialcurr) .* exp(1i .* phasecurr(isamp, subtrialcurr)))) / (sqrt(ntrialsub) * sqrt(sum(ampcurr(isamp, subtrialcurr) .^ 2)));
+                        pacbetween(ipair, isamp, idirection, icorrect) = pac_calculateozkurt(phasecurr(isamp, subtrialcurr), ampcurr(isamp, subtrialcurr));
                     end
                 end
             end
