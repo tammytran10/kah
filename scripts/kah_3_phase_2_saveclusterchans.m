@@ -11,6 +11,8 @@ timewin = [-800, 1600];
 for isubj = 1:length(info.subj)
     subject = info.subj{isubj};
     
+    disp([num2str(isubj) ' ' subject])
+    
     % Load info about channels and time.
     [~, trialinfo, chans, times] = kah_loadftdata(info, subject, 'thetaphase', timewin, 0);    
     nchan = length(chans);
@@ -36,5 +38,5 @@ for isubj = 1:length(info.subj)
     end
     
     % Save.
-    save([info.path.processed.hd subject '_' experiment '_phaseencode_' type '_' num2str(timewin(1)) '_' num2str(timewin(2)) '.mat'], 'statA', 'statB', 'statbetween', 'pvalA', 'pvalB', 'pvalbetween', 'chanpairs', 'times', 'trialinfo', 'chans')
+    save([info.path.processed.hd subject '_' experiment '_phaseencode_' type '_' num2str(timewin(1)) '_' num2str(timewin(2)) '_nosamp.mat'], 'statA', 'statB', 'statbetween', 'pvalA', 'pvalB', 'pvalbetween', 'chanpairs', 'times', 'trialinfo', 'chans')
 end
