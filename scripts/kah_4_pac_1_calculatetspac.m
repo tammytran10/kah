@@ -85,15 +85,17 @@ for isubj = 1:length(info.subj)
             end
             
             for ipair = 1:nchanpair
-                if iperm > nperm
-                    shift = 1:nsamp;
-                else
-                    shift = shifttrials{isubj}(ichan, itrial, iperm);
-                    shift = [shift:nsamp, 1:shift - 1];
+                for itrial = 1:ntrial
+                    if iperm > nperm
+                        shift = 1:nsamp;
+                    else
+                        shift = shifttrials{isubj}(ichan, itrial, iperm);
+                        shift = [shift:nsamp, 1:shift - 1];
+                    end
+                    phasecurr = squeeze(thetaphase(chanpairs(ipair, phasechan), :, itrial));
+                    ampcurr = squeeze(hfaamp(chanpairs(ipair, ampchan), shift, itrial));
+                    pacbetween(ipair, itrial, idirection, iperm) = pac_calculateozkurt(phasecurr, ampcurr);
                 end
-                phasecurr = squeeze(thetaphase(chanpairs(ipair, phasechan), :, itrial));
-                ampcurr = squeeze(hfaamp(chanpairs(ipair, ampchan), shift, itrial));
-                pacbetween(ipair, itrial, idirection, iperm) = pac_calculateozkurt(phasecurr, ampcurr);
             end
         end
     

@@ -29,12 +29,8 @@ for isubj = 1:length(info.subj)
     nchan = length(chans);
     nsamp = length(times);
     
-    shifttrials{isubj} = nan(nchan, ntrial, nperm);
-    for ichan = 1:nchan
-        for itrial = 1:ntrial
-            shifttrials(ichan, itrial, :) = ceil(nsamp * rand(nperm, 1));
-        end
-    end
+    % Generate random sample shifts.
+    shifttrials{isubj} = ceil(nsamp * rand([nchan, ntrial, nperm]));
 end
 
 save([info.path.processed.hd experiment '_trialshifts_default_pac.mat'], 'shifttrials')
