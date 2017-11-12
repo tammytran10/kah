@@ -21,6 +21,9 @@ dogammaamp = 0;
 % Set whether to filter for theta using individual filters. In this case, kah_2_psd_1_calclatethetabands.m should have been run.
 doindividualtheta = 1;
 
+% Set whether to use multiple gamma bands, or one canonical.
+domultigamma = 1;
+
 %%
 % Set theta bands (individual or default of 4-8 Hz), if necessary.
 if dothetaphase
@@ -33,22 +36,28 @@ if dothetaphase
     thetabands = [thetacfs - 2, thetacfs + 2];
 end
 
+% Set gamma bands to multiple 20-Hz wide bands, or one canonical.
+if domultigamma
+    gammabands = ...
+            [80, 100; ...
+            90, 110; ...
+            100, 120; ...
+            110, 130; ...
+            120, 140; ...
+            130, 150]; 
+else
+    gammabands = [80, 150];
+end
+    
 % Preprocess data per subject.
 for isubj = 1:length(info.subj)
     subject = info.subj{isubj};
     disp([num2str(isubj) ' ' subject])
             
     % Pre-allocate. Processing for broadband (< 200 Hz), theta (4-8 Hz) phase,
-    % and high gamma (80-160 Hz) amplitude.
+    % and high gamma (80-150 Hz) amplitude.
     broadband  = struct;
     thetaphase = struct;
-    gammabands = ...
-        [80, 100; ...
-        90, 110; ...
-        100, 120; ...
-        110, 130; ...
-        120, 140; ...
-        130, 150]; 
 
     gammaamp   = cell(size(gammabands, 1), 1); % each element is a Fieldtrip struct, one per narrow band
 
@@ -200,7 +209,10 @@ for isubj = 1:length(info.subj)
     end
 
     % Save gamma amplitude data, if necessary.
-    if dogammaamp        
+    if dogammaamp     
+        if ~domultigamma
+            gammaamp = gammaamp{1}; % just save a struct if there's only one
+        end
         save([info.path.processed.hd '-1000_2750/' subject '_' experiment '_gammaamp.mat'], 'gammaamp', '-v7.3')
     end
 end
