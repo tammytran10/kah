@@ -212,8 +212,10 @@ for isubj = 1:length(info.subj)
     if dogammaamp     
         if ~domultigamma
             gammaamp = gammaamp{1}; % just save a struct if there's only one
+            save([info.path.processed.hd '-1000_2750/' subject '_' experiment '_gammaamp_single.mat'], 'gammaamp', '-v7.3')
+        else
+            save([info.path.processed.hd '-1000_2750/' subject '_' experiment '_gammaamp_multi.mat'], 'gammaamp', '-v7.3')
         end
-        save([info.path.processed.hd '-1000_2750/' subject '_' experiment '_gammaamp.mat'], 'gammaamp', '-v7.3')
     end
 end
 disp('Done.')
