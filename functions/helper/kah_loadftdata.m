@@ -11,7 +11,7 @@ switch datatype
     case 'gammaamp'
         filecurr = [info.path.processed.hd '-1000_2750/' subject '_FR1_gammaamp.mat'];
     case 'hfa'
-        filecurr = [info.path.processed.hd subject '_FR1_hfa_' num2str(timewin(1)) '_' num2str(timewin(2)) '.mat'];
+        filecurr = [info.path.processed.hd subject '_FR1_hfa_-800_1600.mat'];
     otherwise
         error('Data type not available.')
 end
