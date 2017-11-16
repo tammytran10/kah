@@ -50,7 +50,7 @@ for isubj = 1:length(info.subj)
                 phasecurr = squeeze(thetaphase(ichan, :, trialcurr));
                 ampcurr = squeeze(hfaamp(ichan, :, trialcurr));
                 for isamp = 1:nsamp
-                    pacwithin(ichan, isamp, icorrect, iperm) = pac_calculateozkurt(phasecurr(isamp, subtrialcurr), ampcurr(isamp, subtrialcurr));
+                    pacwithin(ichan, isamp, icorrect, iperm) = calculatepac(phasecurr(isamp, subtrialcurr), ampcurr(isamp, subtrialcurr), 'ozkurt');
                 end
             end           
         end
@@ -95,7 +95,7 @@ for isubj = 1:length(info.subj)
                     
                     % Calculate PAC across trials per sample.
                     for isamp = 1:nsamp
-                        pacbetween(ipair, isamp, idirection, icorrect) = pac_calculateozkurt(phasecurr(isamp, subtrialcurr), ampcurr(isamp, subtrialcurr));
+                        pacbetween(ipair, isamp, idirection, icorrect) = calculatepac(phasecurr(isamp, subtrialcurr), ampcurr(isamp, subtrialcurr), 'ozkurt');
                     end
                 end
             end
