@@ -8,6 +8,8 @@ clearvars('-except', 'info')
 type = 'cmtest';
 timewin = [-800, 1600];
 
+experiment = 'FR1';
+
 for isubj = 1:length(info.subj)
     subject = info.subj{isubj};
     
@@ -26,6 +28,7 @@ for isubj = 1:length(info.subj)
     [statA, statB, statbetween, pvalA, pvalB, pvalbetween] = deal(nan(nchanpair, nsamp));
 
     for ipair = 1:nchanpair
+        if mod(ipair, 50) == 0, disp([num2str(ipair) '/' num2str(nchanpair)]), end
         % Load individual channel pair.
         input = load([info.path.processed.cluster subject '_FR1_phaseencode_' type '_' num2str(timewin(1)) '_' num2str(timewin(2)) '_pair_' num2str(ipair) '_nosamp.mat']);
         

@@ -6,15 +6,18 @@ info = kah_info;
 %%
 clearvars('-except', 'info')
 
+rng('default')
+
 % if isempty(gcp), parpool('local', 2); end % open up second pool
 
 % Set experiment.
 experiment = 'FR1';
 
 % Set number of resampling runs.
-nsurrogate = 100;
+load([info.path.processed.hd experiment '_trialshifts_default_pac_within_ts.mat'], 'shifttrials')
+nsurrogate = size(shifttrials{1}, 3);
 
-for isubj = 1:length(info.subj)
+for isubj = 1:length(info.subj)    
     % Get current subject identifier.
     subject = info.subj{isubj};
     
@@ -22,7 +25,8 @@ for isubj = 1:length(info.subj)
     timewin = [0, 1600]; % ms
     
     % Skip subject if all permutations have already been run.
-    if exist([info.path.processed.hd subject '_' experiment '_pac_between_ts_' num2str(timewin(1)) '_' num2str(timewin(2)) '_resamp_' num2str(nsurrogate) '.mat'], 'file')
+%     if exist([info.path.processed.hd subject '_' experiment '_pac_between_ts_' num2str(timewin(1)) '_' num2str(timewin(2)) '_resamp_' num2str(nsurrogate) '.mat'], 'file')
+    if exist([info.path.processed.hd subject '_' experiment '_pac_within_ts_' num2str(timewin(1)) '_' num2str(timewin(2)) '_resamp.mat'], 'file')        
         disp(['Skipping ' subject])
         continue
     end
@@ -40,24 +44,27 @@ for isubj = 1:length(info.subj)
     
     % Calculate within-channel PAC per channel and trial, + surrogate shifts.
     pacwithin = nan(nchan, ntrial, nsurrogate + 1);
-    shifts = nan(nchan, ntrial, nsurrogate);
+%     shifts = nan(nchan, ntrial, nsurrogate);
     for ichan = 1:nchan
         for itrial = 1:ntrial
             phasecurr = squeeze(thetaphase(ichan, :, itrial));
             ampcurr = squeeze(hfaamp(ichan, :, itrial));
-            [pacwithin(ichan, itrial, end), pacwithin(ichan, itrial, 1:nsurrogate), shifts(ichan, itrial, :)] = calculatepac(phasecurr, ampcurr, 'ozkurt');
+%             [pacwithin(ichan, itrial, end), pacwithin(ichan, itrial, 1:nsurrogate), shifts(ichan, itrial, :)] = calculatepac(phasecurr, ampcurr, 'ozkurt', nsurrogate);
+            [pacwithin(ichan, itrial, end), pacwithin(ichan, itrial, 1:nsurrogate)] = calculatepac(phasecurr, ampcurr, 'ozkurt', shifttrials{isubj}(ichan, itrial, :));
         end
     end
-    save([info.path.processed.hd subject '_' experiment '_pac_within_ts_' num2str(timewin(1)) '_' num2str(timewin(2)) '_resamp.mat'], 'pacwithin', 'trialinfo', 'chans', 'shifts')
+    save([info.path.processed.hd subject '_' experiment '_pac_within_ts_' num2str(timewin(1)) '_' num2str(timewin(2)) '_resamp.mat'], 'pacwithin', 'trialinfo', 'chans')
     clear pacwithin shifts
+    
+    continue
     
     % Get all unique pairs of channels.
     chanpairs = nchoosek(1:nchan, 2);
     nchanpair = size(chanpairs, 1);
     
     % Calculate between-channel PAC in both directions for all channel pairs and trials, + shifted surrogates.    
-    pacbetween = nan(nchanpair, ntrial, 2, nperm + 1);
-    shifts = nan(nchanpair, ntrial, 2, nperm);
+    pacbetween = nan(nchanpair, ntrial, 2, nsurrogate + 1);
+    shifts = nan(nchanpair, ntrial, 2, nsurrogate);
     
     for idirection = 1:2
         % Switch phase and amp data based on direction.
@@ -68,10 +75,11 @@ for isubj = 1:length(info.subj)
         end
         
         for ipair = 1:nchanpair
+            disp([num2str(isubj) ' ' subject ' ' num2str(ipair) '/' num2str(nchanpair) ' ' num2str(idirection)])
             for itrial = 1:ntrial
                 phasecurr = squeeze(thetaphase(chanpairs(ipair, phasechan), :, itrial));
                 ampcurr = squeeze(hfaamp(chanpairs(ipair, phasechan), :, itrial));
-                [pacbetween(ipair, itrial, end), pacbetween(ipair, itrial, 1:nperm), shifts(ipair, itrial, :)] = calculatepac(phasecurr, ampcurr, 'ozkurt');
+                [pacbetween(ipair, itrial, idirection, end), pacbetween(ipair, itrial, idirection, 1:nsurrogate), shifts(ipair, itrial, idirection, :)] = calculatepac(phasecurr, ampcurr, 'ozkurt', nsurrogate);
             end
         end
     end
