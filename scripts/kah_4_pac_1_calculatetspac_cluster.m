@@ -27,7 +27,9 @@ stack = 40; timreq = 300; memreq = 0.3 * 1024^3;
 % qsubcellfun will parallelize across all channel pairs regardless of subject.
 [subjects, chanA, chanB, pairnums, paths] = deal({});
 
-for isubj = 2:length(info.subj)
+totalpair = 0;
+
+for isubj = 1:length(info.subj)
     % Get current subject identifier.
     subject = info.subj{isubj};
     
@@ -40,25 +42,16 @@ for isubj = 2:length(info.subj)
     % Get all unique pairs of channels.
     chanpairs = nchoosek(1:nchan, 2);
     nchanpair = size(chanpairs, 1);
+    totalpair = totalpair + nchanpair;
     if testrun
         nchanpair = 1; % do just one pair to test.
     end
     
-    % Determine name of output file.
-    newfile = [clusterpath 'tspac/' subject '_FR1_pac_between_ts_0_1600_resamp.mat'];
-    if ~exist(newfile, 'file')
-        save(newfile, 'subject');
-    end
-
-    % Get list of variables in the output file to see which channel pairs have already been run.
-    varlist = who(matfile(newfile));
-    disp([num2str(length(varlist) - 1)  '/' num2str(nchanpair)])
-    return
-    
     % Specify inputs to kah_calculatepac per channel pair.
     for ipair = 1:nchanpair
         % Skip job if this channel pair has already been run.
-        if sum(cellfun(@(x) ~isempty(x), strfind(varlist, ['pair' num2str(ipair)])))
+        newfile = [clusterpath 'tspac/' subject '_FR1_pac_between_ts_0_1600_pair_' num2str(ipair) '_resamp.mat'];
+        if exist(newfile, 'file')
             continue
         end
         
@@ -71,7 +64,10 @@ for isubj = 2:length(info.subj)
         pairnums = [pairnums; ipair];
         paths = [paths; clusterpath];
     end
+    disp([num2str(sum(cellfun(@(x) ~isempty(x), strfind(subjects, subject)))) '/' num2str(nchanpair)])
 end
+disp([num2str(length(subjects)) '/' num2str(totalpair)])
+return
 
 % Max out time and mem requests for test run.
 if testrun

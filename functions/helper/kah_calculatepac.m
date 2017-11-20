@@ -32,13 +32,8 @@ for itrial = 1:ntrial
     end
 end
 
-% Save pacbetween values as new variable in output file, variable name including the pair number.
-% PAC from each pair of electrodes will in this way have a unique variable name.
-pairvarname = ['pair' num2str(pairnum)];
-eval([pairvarname ' = pacbetween;']);
-
-outputfile = [clusterpath 'tspac/' subject '_FR1_pac_between_ts_0_1600_resamp.mat'];
-save(outputfile, '-append', pairvarname);
+outputfile = [clusterpath 'tspac/' subject '_FR1_pac_between_ts_0_1600_pair_' num2str(pairnum) '_resamp.mat'];
+save(outputfile, pacbetween);
 end
 
 % output = matfile(outputfile, 'Writable', true);
