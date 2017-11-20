@@ -11,7 +11,7 @@ hfaamp = flip(hfaamp, 1); % so that theta and HFA from opposite channels are mat
 [ndirection, ~, ntrial] = size(hfaamp);
 
 % Limit to post-stimulus period.
-timewin = dsearchn(times(:), [0; 1600]);
+timewin = dsearchn(times(:), [0; 1.6]);
 thetaphase = thetaphase(:, timewin(1):timewin(2), :);
 hfaamp = hfaamp(:, timewin(1):timewin(2), :);
 
@@ -33,7 +33,7 @@ for itrial = 1:ntrial
 end
 
 outputfile = [clusterpath 'tspac/' subject '_FR1_pac_between_ts_0_1600_pair_' num2str(pairnum) '_resamp.mat'];
-save(outputfile, pacbetween);
+save(outputfile, 'pacbetween');
 end
 
 % output = matfile(outputfile, 'Writable', true);

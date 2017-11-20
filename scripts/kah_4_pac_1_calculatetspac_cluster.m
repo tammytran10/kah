@@ -17,7 +17,7 @@ end
 experiment = 'FR1';
 
 % Set true if just testing one run
-testrun = 0;
+testrun = 1;
 
 % Change these params for non test runs.
 stack = 40; timreq = 300; memreq = 0.3 * 1024^3;
@@ -42,11 +42,11 @@ for isubj = 1:length(info.subj)
     % Get all unique pairs of channels.
     chanpairs = nchoosek(1:nchan, 2);
     nchanpair = size(chanpairs, 1);
-    totalpair = totalpair + nchanpair;
     if testrun
         nchanpair = 1; % do just one pair to test.
     end
-    
+    totalpair = totalpair + nchanpair;
+
     % Specify inputs to kah_calculatepac per channel pair.
     for ipair = 1:nchanpair
         % Skip job if this channel pair has already been run.
@@ -68,7 +68,6 @@ for isubj = 1:length(info.subj)
 end
 disp([num2str(length(subjects)) '/' num2str(totalpair)])
 return
-
 % Max out time and mem requests for test run.
 if testrun
     timreq = 28800; stack = 1; memreq = 4 * 1024^3;
@@ -76,7 +75,7 @@ end
 
 if local
     % Run a few to check what's going on.
-    for irun = 1
+    for irun = 1:length(subjects)
         tic
         memtic
         kah_calculatepac(subjects{irun}, chanA{irun}, chanB{irun}, pairnums{irun}, paths{irun});
