@@ -6,8 +6,6 @@ info = kah_info;
 %%
 clearvars('-except', 'info')
 
-rng('default')
-
 % if isempty(gcp), parpool('local', 2); end % open up second pool
 
 % Set experiment.
@@ -46,6 +44,7 @@ for isubj = 1:length(info.subj)
     pacwithin = nan(nchan, ntrial, nsurrogate + 1);
 %     shifts = nan(nchan, ntrial, nsurrogate);
     for ichan = 1:nchan
+        disp([num2str(isubj) ' ' num2str(ichan) '/' num2str(nchan)])
         for itrial = 1:ntrial
             phasecurr = squeeze(thetaphase(ichan, :, itrial));
             ampcurr = squeeze(hfaamp(ichan, :, itrial));
