@@ -5,6 +5,20 @@ info = kah_info;
 %%
 clearvars('-except', 'info')
 
+timewin = [-800, 0];
+
+slopes = cell(length(info.subj), 1);
+
+for isubj = 1:length(info.subj)
+    subject = info.subj{isubj};
+    input = load([info.path.processed.hd subject '_FR1_slope_' num2str(timewin(1)) '_' num2str(timewin(2)) '.mat'], 'temporal', 'frontal', 'slopes', 'trialinfo');
+    slopes{isubj} = input.slopes;
+end
+
+save([info.path.processed.hd 'FR1_slopes_' num2str(timewin(1)) '_' num2str(timewin(2)) '.mat'], 'slopes')
+%%
+clearvars('-except', 'info')
+
 timewin = [300, 1300];
 
 vals = nan(length(info.subj), 2);
