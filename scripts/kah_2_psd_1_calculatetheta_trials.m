@@ -24,12 +24,12 @@ for isubj = 1:length(info.subj)
     subject = info.subj{isubj};
     
     % Load FOOOF output for each subject.
-    load([info.path.processed.hd subject '_FR1_fooof_' num2str(timewin(1)) '_' num2str(timewin(2)) '.mat'], 'fooof')
+    load([info.path.processed.hd subject '_FR1_fooof_' num2str(timewin(1)) '_' num2str(timewin(2)) '_padded.mat'], 'fooof')
     [nchan, ntrial] = size(fooof);
     
-    % For saving bands per channel.
+    % For saving bands per channel per trial.
     bands{isubj} = nan(nchan, ntrial, 2);
-    amplitudes{isubj} = nan(nchan, ntrial);
+    amplitudes{isubj} = zeros(nchan, ntrial);
     
     for ichan = 1:nchan
         for itrial = 1:ntrial
@@ -52,7 +52,7 @@ for isubj = 1:length(info.subj)
             
             % Get bands for detected thetas.
             switch pickpeak
-                % Aggregate bandwidths.
+                % Aggregate peaks.
                 case 'all'
                     edges = [max(default), min(default)];
                     amp = 0;
@@ -73,5 +73,5 @@ for isubj = 1:length(info.subj)
         end
     end
 end
-save([info.path.processed.hd 'FR1_thetabands_' num2str(timewin(1)) '_' num2str(timewin(2)) '_trials.mat'], 'bands', 'amplitudes')
+save([info.path.processed.hd 'FR1_thetabands_' num2str(timewin(1)) '_' num2str(timewin(2)) '_trials_padded.mat'], 'bands', 'amplitudes')
 disp('Done.')
