@@ -9,6 +9,9 @@ clearvars('-except', 'info')
 % Set time window of interest.
 timewin = [-800, 0];
 
+% Set whether to pad or not. Use [] for no padding and the number of seconds for padding.
+timewinpad = [];
+
 for isubj = 1:length(info.subj)
     subject = info.subj{isubj};
 
@@ -18,7 +21,11 @@ for isubj = 1:length(info.subj)
     [dat, trialinfo, chans, times, temporal, frontal] = kah_loadftdata(info, subject, 'broadband', timewin, 1);
 
     % Construct PSDs.
-    nfft = length(times); % use the full trial (no padding)
+    if isempty(timewinpad)
+        nfft = length(times); % no padding
+    else
+        nfft = floor(timewinpad * info.(subject).fs); % pad out to some number of secconds
+    end
     nfreq = ceil(nfft/2) + 1;
 
     psds = nan(length(chans), nfreq, size(trialinfo, 1));
@@ -27,6 +34,11 @@ for isubj = 1:length(info.subj)
     end
 
     % Save PSDs.
-    save([info.path.processed.hd subject '_FR1_psd_' num2str(timewin(1)) '_' num2str(timewin(2)) '.mat'], 'timewin', 'trialinfo', 'times', 'dat', 'freq', 'psds', 'chans', 'temporal', 'frontal', '-v7')
+    if isempty(timewinpad)
+        padlabel = '';
+    else
+        padlabel = '_padded';
+    end
+    save([info.path.processed.hd subject '_FR1_psd_' num2str(timewin(1)) '_' num2str(timewin(2)) padlabel '.mat'], 'timewin', 'trialinfo', 'times', 'dat', 'freq', 'psds', 'chans', 'temporal', 'frontal', '-v7')
 end
 disp('Done')
