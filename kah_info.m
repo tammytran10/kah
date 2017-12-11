@@ -26,6 +26,9 @@ info.subjsubset = {'R1020J' 'R1032D' 'R1033D' 'R1034D' 'R1045E' 'R1059J' 'R1075J
 % Set path to where source files are.
 info.path.src = '/Users/Rogue/Documents/Research/Projects/KAH/code/';
 
+% Set path to where to save CSV files to.
+info.path.csv = '/Users/Rogue/Documents/Research/Projects/KAH/csv/';
+
 % Set path to Kahana folder on shared VoytekLab server.
 hdpath = '/Volumes/DATAHD/KAHANA/';
 clusterpath = '/Volumes/voyteklab/common/data2/kahana_ecog_RAMphase1/';
