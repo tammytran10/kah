@@ -27,6 +27,7 @@ clear amplitudes
 load([info.path.processed.hd 'FR1_hfa.mat'], 'hfabaseline');
 load([info.path.processed.hd 'FR1_hfa.mat'], 'hfaencoding');
 
+% Load within-channel tsPAC.
 load([info.path.processed.hd 'FR1_tspac_within_0_1600.mat']);
 
 % Load channel and trial information.
@@ -47,11 +48,11 @@ for isubj = 1:length(info.subj)
     subjcurr = cell(nchan * ntrial, length(header));
     linenum = 1; % next line to fill in for the current subject.
     
-    for ichan = 1:nchan
+    for ipair = 1:nchan
         for itrial = 1:ntrial
-            linecurr = {info.subj{isubj}, info.age(isubj), ichan, chanregions{isubj}{ichan}, itrial, encoding{isubj}(itrial), ...
-                preslope{isubj}(ichan, itrial), postslope{isubj}(ichan, itrial), pretheta{isubj}(ichan, itrial), posttheta{isubj}(ichan, itrial), ...
-                hfabaseline{isubj}(ichan, itrial), hfaencoding{isubj}(ichan, itrial), tspac{isubj}.raw(ichan, itrial), tspac{isubj}.norm(ichan, itrial), tspac{isubj}.pvaltrial(ichan, itrial)};
+            linecurr = {info.subj{isubj}, info.age(isubj), ipair, chanregions{isubj}{ipair}, itrial, encoding{isubj}(itrial), ...
+                preslope{isubj}(ipair, itrial), postslope{isubj}(ipair, itrial), pretheta{isubj}(ipair, itrial), posttheta{isubj}(ipair, itrial), ...
+                hfabaseline{isubj}(ipair, itrial), hfaencoding{isubj}(ipair, itrial), tspac{isubj}.raw(ipair, itrial), tspac{isubj}.norm(ipair, itrial), tspac{isubj}.pvaltrial(ipair, itrial)};
             linecurr = cellfun(@string, linecurr, 'UniformOutput', false); % needs to be strings
             subjcurr(linenum, :) = linecurr;
             linenum = linenum + 1;
@@ -65,3 +66,142 @@ end
 
 % Save.
 util_cell2csv([info.path.csv 'kah_singletrial_singlechannel.csv'], csv, header)
+
+%% SINGLE-CHANNEL
+clearvars('-except', 'info')
+
+% Load thetas p-values..
+load([info.path.processed.hd 'FR1_thetabands_-800_0_trials_padded.mat'], 'thetapvals');
+prethetapvals = thetapvals;
+
+load([info.path.processed.hd 'FR1_thetabands_0_1600_trials.mat'], 'thetapvals');
+postthetapvals = thetapvals;
+
+clear thetapvals
+
+% Load HFA p-values.
+load([info.path.processed.hd 'FR1_hfa.mat'], 'hfapval');
+
+% Load channel and trial information.
+load([info.path.processed.hd 'FR1_chantrialinfo.mat'], 'chanregions', 'chans')
+
+% Set names of metrics.
+header = {'subject', 'age', 'channel', 'region', 'pvalpretheta', 'pvalposttheta', 'pvalhfa'};
+
+% Build CSV.
+csv = [];
+
+for isubj = 1:length(info.subj)
+    disp(isubj)
+    nchan = length(chans{isubj});
+    
+    % Pre-allocate per subject for speed.
+    subjcurr = cell(nchan, length(header));
+    
+    for ipair = 1:nchan
+        linecurr = {info.subj{isubj}, info.age(isubj), ipair, chanregions{isubj}{ipair}, ... 
+            prethetapvals{isubj}(ipair), postthetapvals{isubj}(ipair), hfapval{isubj}(ipair)};
+        linecurr = cellfun(@string, linecurr, 'UniformOutput', false); % needs to be strings
+        subjcurr(ipair, :) = linecurr;
+    end
+    
+    % Append subject.
+    csv = [csv; subjcurr];
+    clear subjcurr
+end
+
+% Save.
+util_cell2csv([info.path.csv 'kah_singlechannel.csv'], csv, header)
+
+%% MULTI-CHANNEL, NO DIRECTION
+clearvars('-except', 'info')
+
+% Load phase-encoding.
+load([info.path.processed.hd 'FR1_phaseencoding_0_1600.mat'], 'phaseencoding');
+
+% Load channel and trial information.
+load([info.path.processed.hd 'FR1_chantrialinfo.mat'], 'pairs', 'pairregions')
+
+% Set names of metrics.
+header = {'subject', 'age', 'channelA', 'channelB', 'regionA', 'regionB', 'encodingonset', 'encodinglength', 'encodingstrength', 'encodingepisodes'};
+
+% Build CSV.
+csv = [];
+
+for isubj = 1:length(info.subj)
+    disp(isubj)
+    npair = size(pairs{isubj}, 1);
+    
+    % Pre-allocate per subject for speed.
+    subjcurr = cell(npair, length(header));
+    
+    for ipair = 1:npair
+        linecurr = {info.subj{isubj}, info.age(isubj), pairs{isubj}(ipair, 1), pairs{isubj}(ipair, 2), ...
+            pairregions{isubj}{ipair, 1}, pairregions{isubj}{ipair, 2}, ... 
+            phaseencoding{isubj}.onset(ipair), phaseencoding{isubj}.time(ipair), phaseencoding{isubj}.strength(ipair), phaseencoding{isubj}.nepisode(ipair)};
+        linecurr = cellfun(@string, linecurr, 'UniformOutput', false); % needs to be strings
+        
+        missing = cellfun(@ismissing, linecurr);        
+        if sum(missing)
+            linecurr(missing) = {[num2str(nan)]};
+        end
+        subjcurr(ipair, :) = linecurr;
+    end
+    
+    % Append subject.
+    csv = [csv; subjcurr];
+    clear subjcurr
+end
+
+% Save.
+util_cell2csv([info.path.csv 'kah_multichannel_nodirection.csv'], csv, header)
+
+%% MULTI-CHANNEL, BIDIRECTIONAL
+clearvars('-except', 'info')
+
+% Load pair p-values for tsPAC.
+load([info.path.processed.hd 'FR1_tspac_between_0_1600.mat'], 'tspac');
+
+% Load erPAC.
+load([info.path.processed.hd 'FR1_erpac_between.mat'], 'erpac');
+
+% Load channel and trial information.
+load([info.path.processed.hd 'FR1_chantrialinfo.mat'], 'pairs', 'pairregions')
+
+% Set names of metrics.
+header = {'subject', 'age', 'channelA', 'channelB', 'regionA', 'regionB', 'pvaltspacAB', 'pvaltspacBA', ...
+    'erpacAB_remembered_stim', 'erpacAB_forgotten_stim', 'erpacAB_remembered_phase', 'erpacAB_forgotten_phase',...
+    'erpacBA_remembered_stim', 'erpacBA_forgotten_stim', 'erpacBA_remembered_phase', 'erpacBA_forgotten_phase'};
+
+% Build CSV.
+csv = [];
+
+for isubj = 1:length(info.subj)
+    disp(isubj)
+    npair = size(pairs{isubj}, 1);
+    
+    % Pre-allocate per subject for speed.
+    subjcurr = cell(npair, length(header));
+    
+    for ipair = 1:npair
+        linecurr = {info.subj{isubj}, info.age(isubj), pairs{isubj}(ipair, 1), pairs{isubj}(ipair, 2), ...
+            pairregions{isubj}{ipair, 1}, pairregions{isubj}{ipair, 2}, ... 
+            tspac{isubj}.AB.pvalpair(ipair), tspac{isubj}.BA.pvalpair(ipair), ... 
+            erpac{isubj}.AB.remembered.stim(ipair), erpac{isubj}.AB.forgotten.stim(ipair), erpac{isubj}.AB.remembered.encoding(ipair), erpac{isubj}.AB.forgotten.encoding(ipair),...
+            erpac{isubj}.BA.remembered.stim(ipair), erpac{isubj}.BA.forgotten.stim(ipair), erpac{isubj}.BA.remembered.encoding(ipair), erpac{isubj}.BA.forgotten.encoding(ipair)};
+        linecurr = cellfun(@string, linecurr, 'UniformOutput', false); % needs to be strings
+        
+        missing = cellfun(@ismissing, linecurr);        
+        if sum(missing)
+            linecurr(missing) = {num2str(nan)};
+        end
+        subjcurr(ipair, :) = linecurr;
+    end
+    
+    % Append subject.
+    csv = [csv; subjcurr];
+    clear subjcurr
+end
+
+% Save.
+util_cell2csv([info.path.csv 'kah_multichannel_bidirectional.csv'], csv, header)
