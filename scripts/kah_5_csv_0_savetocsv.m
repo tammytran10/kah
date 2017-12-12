@@ -103,7 +103,7 @@ for isubj = 1:length(info.subj)
     
     for ipair = 1:nchan
         % Build current line.
-        linecurr = {info.subj{isubj}, info.age(isubj), ipair, chanregions{isubj}{ipair}, ... 
+        linecurr = {info.subj{isubj}, info.age(isubj), ipair, chanregions{isubj}{ipair}, ...
             prethetapvals{isubj}(ipair), postthetapvals{isubj}(ipair), hfapval{isubj}(ipair)};
         linecurr = cellfun(@string, linecurr, 'UniformOutput', false); % needs to be strings
         
@@ -135,7 +135,7 @@ load([info.path.processed.hd 'FR1_phaseencoding_0_1600.mat'], 'phaseencoding');
 load([info.path.processed.hd 'FR1_chantrialinfo.mat'], 'pairs', 'pairregions')
 
 % Set names of metrics.
-header = {'subject', 'age', 'channelA', 'channelB', 'regionA', 'regionB', 'pvaltspacAB', 'pvaltspacBA', ...
+header = {'subject', 'age', 'pair', 'channelA', 'channelB', 'regionA', 'regionB', 'pvaltspacAB', 'pvaltspacBA', ...
     'erpacAB_remembered_stim', 'erpacAB_forgotten_stim', 'erpacAB_remembered_phase', 'erpacAB_forgotten_phase', ...
     'erpacBA_remembered_stim', 'erpacBA_forgotten_stim', 'erpacBA_remembered_phase', 'erpacBA_forgotten_phase', ...
     'encodingonset', 'encodinglength', 'encodingstrength', 'encodingepisodes'};
@@ -152,16 +152,16 @@ for isubj = 1:length(info.subj)
     
     for ipair = 1:npair
         % Build current line.
-        linecurr = {info.subj{isubj}, info.age(isubj), pairs{isubj}(ipair, 1), pairs{isubj}(ipair, 2), ...
-            pairregions{isubj}{ipair, 1}, pairregions{isubj}{ipair, 2}, ... 
-            tspac{isubj}.AB.pvalpair(ipair), tspac{isubj}.BA.pvalpair(ipair), ... 
+        linecurr = {info.subj{isubj}, info.age(isubj), ipair, pairs{isubj}(ipair, 1), pairs{isubj}(ipair, 2), ...
+            pairregions{isubj}{ipair, 1}, pairregions{isubj}{ipair, 2}, ...
+            tspac{isubj}.AB.pvalpair(ipair), tspac{isubj}.BA.pvalpair(ipair), ...
             erpac{isubj}.AB.remembered.stim(ipair), erpac{isubj}.AB.forgotten.stim(ipair), erpac{isubj}.AB.remembered.encoding(ipair), erpac{isubj}.AB.forgotten.encoding(ipair), ...
             erpac{isubj}.BA.remembered.stim(ipair), erpac{isubj}.BA.forgotten.stim(ipair), erpac{isubj}.BA.remembered.encoding(ipair), erpac{isubj}.BA.forgotten.encoding(ipair), ...
             phaseencoding{isubj}.onset(ipair), phaseencoding{isubj}.time(ipair), phaseencoding{isubj}.strength(ipair), phaseencoding{isubj}.nepisode(ipair)};
         linecurr = cellfun(@string, linecurr, 'UniformOutput', false); % needs to be strings
         
         % Replace <missing> with NaNs.
-        missing = cellfun(@ismissing, linecurr);        
+        missing = cellfun(@ismissing, linecurr);
         if sum(missing)
             linecurr(missing) = {num2str(nan)};
         end
@@ -188,43 +188,48 @@ load([info.path.processed.hd 'FR1_tspac_between_0_1600.mat'], 'tspac');
 load([info.path.processed.hd 'FR1_chantrialinfo.mat'], 'pairs', 'pairregions', 'encoding')
 
 % Set names of metrics.
-header = {'subject', 'age', 'channelA', 'channelB', 'regionA', 'regionB', 'trial', 'encoding', ...
+header = {'subject', 'age', 'pair', 'channelA', 'channelB', 'regionA', 'regionB', 'trial', 'encoding', ...
     'rawtspacAB', 'rawtspacBA', 'normtspacAB', 'normtspacBA', 'pvaltspacAB', 'pvaltspacBA'};
 
+useheader = header;
 permission = []; % for first writing to disk. Data from previous runs will be cleared first.
 
-% Write to disk one line at a time because of the amount of data.
 for isubj = 1:length(info.subj)
-    disp(isubj)
     npair = size(pairs{isubj}, 1);
     ntrial = length(encoding{isubj});
     
     for ipair = 1:npair
+        disp([num2str(isubj) ' ' num2str(ipair) '/' num2str(npair)])
+        % Pre-allocate for each pair. Each pair will be written to disk individually.
+        paircurr = cell(ntrial, length(header));
         for itrial = 1:ntrial
             % Build current line.
-            linecurr = {info.subj{isubj}, info.age(isubj), pairs{isubj}(ipair, 1), pairs{isubj}(ipair, 2), ...
-                pairregions{isubj}{ipair, 1}, pairregions{isubj}{ipair, 2}, ... 
+            linecurr = {info.subj{isubj}, info.age(isubj), ipair, pairs{isubj}(ipair, 1), pairs{isubj}(ipair, 2), ...
+                pairregions{isubj}{ipair, 1}, pairregions{isubj}{ipair, 2}, ...
                 itrial, encoding{isubj}(itrial), ...
-                tspac{isubj}.AB.raw(ipair, itrial), tspac{isubj}.BA.raw(ipair, itrial), ... 
-                tspac{isubj}.AB.norm(ipair, itrial), tspac{isubj}.BA.norm(ipair, itrial), ... 
-                tspac{isubj}.AB.pvaltrial(ipair, itrial), tspac{isubj}.BA.pvaltrial(ipair, itrial), ... 
+                tspac{isubj}.AB.raw(ipair, itrial), tspac{isubj}.BA.raw(ipair, itrial), ...
+                tspac{isubj}.AB.norm(ipair, itrial), tspac{isubj}.BA.norm(ipair, itrial), ...
+                tspac{isubj}.AB.pvaltrial(ipair, itrial), tspac{isubj}.BA.pvaltrial(ipair, itrial), ...
                 };
             linecurr = cellfun(@string, linecurr, 'UniformOutput', false); % needs to be strings
-
+            
             % Replace <missing> with NaNs.
-            missing = cellfun(@ismissing, linecurr);        
+            missing = cellfun(@ismissing, linecurr);
             if sum(missing)
                 linecurr(missing) = {num2str(nan)};
             end
             
-            % Switch to append and no header after one trial has been written to disk.
-            if itrial > 1
-                header = [];
-                permission = 'append';
-            end
-            
-            % Save current line right to disk.
-            util_cell2csv([info.path.csv 'kah_singletrial_multichannel.csv'], linecurr, header, permission)
+            % Save current line.
+            paircurr(itrial, :) = linecurr;
         end
+        
+        % Switch to append and no header after one pair has been written to disk.
+        if ipair > 1
+            useheader = [];
+            permission = 'append';
+        end
+        
+        % Save current line right to disk.
+        util_cell2csv([info.path.csv 'kah_singletrial_multichannel.csv'], paircurr, header, permission)
     end
 end
