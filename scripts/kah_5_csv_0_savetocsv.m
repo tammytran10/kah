@@ -191,8 +191,9 @@ load([info.path.processed.hd 'FR1_chantrialinfo.mat'], 'pairs', 'pairregions', '
 header = {'subject', 'age', 'pair', 'channelA', 'channelB', 'regionA', 'regionB', 'trial', 'encoding', ...
     'rawtspacAB', 'rawtspacBA', 'normtspacAB', 'normtspacBA', 'pvaltspacAB', 'pvaltspacBA'};
 
+% For first writing to disk with a header. Data from previous runs will be cleared first.
 useheader = header;
-permission = []; % for first writing to disk. Data from previous runs will be cleared first.
+permission = []; 
 
 for isubj = 1:length(info.subj)
     npair = size(pairs{isubj}, 1);
