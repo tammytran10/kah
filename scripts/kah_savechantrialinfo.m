@@ -16,7 +16,7 @@ for isubj = 1:length(info.subj)
     
     input = load([info.path.processed.hd subject '_' experiment '_pac_between_ts_' num2str(timewin(1)) '_' num2str(timewin(2)) '_resamp.mat'], 'chanpairs', 'trialinfo', 'chans', 'temporal', 'frontal');
     
-    chans{isubj} = 1:length(input.chans);
+    chans{isubj} = input.chans;
     pairs{isubj} = input.chanpairs;
     
     chanregions{isubj} = cell(length(chans{isubj}), 1);
@@ -31,7 +31,7 @@ for isubj = 1:length(info.subj)
     end
     
     pairregions{isubj} = chanregions{isubj}(pairs{isubj});
-    
+    pairs{isubj} = input.chans(input.chanpairs);
     encoding{isubj} = input.trialinfo(:, 3);
 end
 
