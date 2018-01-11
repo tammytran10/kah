@@ -24,8 +24,7 @@ posttheta = amplitudes;
 clear amplitudes
 
 % Load HFA amplitudes.
-load([info.path.processed.hd 'FR1_hfa.mat'], 'hfabaseline');
-load([info.path.processed.hd 'FR1_hfa.mat'], 'hfaencoding');
+load([info.path.processed.hd 'FR1_hfa.mat'], 'hfabaseline', 'hfaencoding');
 
 % Load within-channel tsPAC.
 load([info.path.processed.hd 'FR1_tspac_within_0_1600.mat']);
@@ -51,7 +50,7 @@ for isubj = 1:length(info.subj)
     for ipair = 1:nchan
         for itrial = 1:ntrial
             % Build current line.
-            linecurr = {info.subj{isubj}, info.age(isubj), ipair, chanregions{isubj}{ipair}, itrial, encoding{isubj}(itrial), ...
+            linecurr = {info.subj{isubj}, info.age(isubj), chans{isubj}{ipair}, chanregions{isubj}{ipair}, itrial, encoding{isubj}(itrial), ...
                 preslope{isubj}(ipair, itrial), postslope{isubj}(ipair, itrial), pretheta{isubj}(ipair, itrial), posttheta{isubj}(ipair, itrial), ...
                 hfabaseline{isubj}(ipair, itrial), hfaencoding{isubj}(ipair, itrial), tspac{isubj}.raw(ipair, itrial), tspac{isubj}.norm(ipair, itrial), tspac{isubj}.pvaltrial(ipair, itrial)};
             
@@ -73,7 +72,7 @@ util_cell2csv([info.path.csv 'kah_singletrial_singlechannel.csv'], csv, header)
 %% SINGLE-CHANNEL
 clearvars('-except', 'info')
 
-% Load thetas p-values..
+% Load thetas p-values.
 load([info.path.processed.hd 'FR1_thetabands_-800_0_trials_padded.mat'], 'thetapvals');
 prethetapvals = thetapvals;
 
@@ -103,7 +102,7 @@ for isubj = 1:length(info.subj)
     
     for ipair = 1:nchan
         % Build current line.
-        linecurr = {info.subj{isubj}, info.age(isubj), ipair, chanregions{isubj}{ipair}, ...
+        linecurr = {info.subj{isubj}, info.age(isubj), chans{isubj}{ipair}, chanregions{isubj}{ipair}, ...
             prethetapvals{isubj}(ipair), postthetapvals{isubj}(ipair), hfapval{isubj}(ipair)};
         linecurr = cellfun(@string, linecurr, 'UniformOutput', false); % needs to be strings
         
@@ -152,7 +151,7 @@ for isubj = 1:length(info.subj)
     
     for ipair = 1:npair
         % Build current line.
-        linecurr = {info.subj{isubj}, info.age(isubj), ipair, pairs{isubj}(ipair, 1), pairs{isubj}(ipair, 2), ...
+        linecurr = {info.subj{isubj}, info.age(isubj), ipair, pairs{isubj}{ipair, 1}, pairs{isubj}{ipair, 2}, ...
             pairregions{isubj}{ipair, 1}, pairregions{isubj}{ipair, 2}, ...
             tspac{isubj}.AB.pvalpair(ipair), tspac{isubj}.BA.pvalpair(ipair), ...
             erpac{isubj}.AB.remembered.stim(ipair), erpac{isubj}.AB.forgotten.stim(ipair), erpac{isubj}.AB.remembered.encoding(ipair), erpac{isubj}.AB.forgotten.encoding(ipair), ...
@@ -160,7 +159,7 @@ for isubj = 1:length(info.subj)
             phaseencoding{isubj}.onset(ipair), phaseencoding{isubj}.time(ipair), phaseencoding{isubj}.strength(ipair), phaseencoding{isubj}.nepisode(ipair)};
         linecurr = cellfun(@string, linecurr, 'UniformOutput', false); % needs to be strings
         
-        % Replace <missing> with NaNs.
+        % Replace <missing> with NaNs. Missings are when the channel pair did not show any phase encoding.
         missing = cellfun(@ismissing, linecurr);
         if sum(missing)
             linecurr(missing) = {num2str(nan)};
@@ -177,6 +176,7 @@ end
 
 % Save.
 util_cell2csv([info.path.csv 'kah_multichannel.csv'], csv, header)
+disp('Done.')
 
 %% SINGLE-TRIAL, MULTI-CHANNEL
 clearvars('-except', 'info')
@@ -191,21 +191,27 @@ load([info.path.processed.hd 'FR1_chantrialinfo.mat'], 'pairs', 'pairregions', '
 header = {'subject', 'age', 'pair', 'channelA', 'channelB', 'regionA', 'regionB', 'trial', 'encoding', ...
     'rawtspacAB', 'rawtspacBA', 'normtspacAB', 'normtspacBA', 'pvaltspacAB', 'pvaltspacBA'};
 
-% For first writing to disk with a header. Data from previous runs will be cleared first.
-useheader = header;
-permission = []; 
-
 for isubj = 1:length(info.subj)
+    % Skip this subject if their data has already been saved.
+    filecurr = [info.path.csv 'kah_singletrial_multichannel_' info.subj{isubj} '.csv'];
+    if exist(filecurr, 'file')
+        disp(['Skipping subject ' num2str(isubj)])
+        continue
+    end
+    
     npair = size(pairs{isubj}, 1);
     ntrial = length(encoding{isubj});
     
+    % Pre-allocate per subject for speed.
+    subjcurr = cell(npair * ntrial, length(header));
+    linenum = 1; % next line to fill in for the current subject.
+    
     for ipair = 1:npair
         disp([num2str(isubj) ' ' num2str(ipair) '/' num2str(npair)])
-        % Pre-allocate for each pair. Each pair will be written to disk individually.
-        paircurr = cell(ntrial, length(header));
+        
         for itrial = 1:ntrial
             % Build current line.
-            linecurr = {info.subj{isubj}, info.age(isubj), ipair, pairs{isubj}(ipair, 1), pairs{isubj}(ipair, 2), ...
+            linecurr = {info.subj{isubj}, info.age(isubj), ipair, pairs{isubj}{ipair, 1}, pairs{isubj}{ipair, 2}, ...
                 pairregions{isubj}{ipair, 1}, pairregions{isubj}{ipair, 2}, ...
                 itrial, encoding{isubj}(itrial), ...
                 tspac{isubj}.AB.raw(ipair, itrial), tspac{isubj}.BA.raw(ipair, itrial), ...
@@ -217,20 +223,19 @@ for isubj = 1:length(info.subj)
             % Replace <missing> with NaNs.
             missing = cellfun(@ismissing, linecurr);
             if sum(missing)
+                disp('here')
+                return
                 linecurr(missing) = {num2str(nan)};
             end
             
             % Save current line.
-            paircurr(itrial, :) = linecurr;
+            subjcurr(linenum, :) = linecurr;
+            linenum = linenum + 1;            
         end
-        
-        % Switch to append and no header after one pair has been written to disk.
-        if ipair > 1
-            useheader = [];
-            permission = 'append';
-        end
-        
-        % Save current line right to disk.
-        util_cell2csv([info.path.csv 'kah_singletrial_multichannel.csv'], paircurr, header, permission)
+               
     end
+
+    % Save current line right to disk.
+    disp('Saving.')
+    util_cell2csv(filecurr, subjcurr, header, [])
 end
