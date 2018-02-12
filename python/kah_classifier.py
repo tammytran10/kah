@@ -97,18 +97,19 @@ class KahClassifier:
         """
 
         # Aggregate all measures per trial per region.
-        stsc_ave = kahdata.stsc.pivot_table(index=['trial', 'region'], aggfunc = np.median)
-        stmc_ave = kahdata.stmc.pivot_table(index=['trial', 'direction'], aggfunc = np.median)
+        stsc_ave = kahdata.stsc.pivot_table(index=['trial', 'region'], aggfunc = np.median).unstack()
+        stmc_ave = kahdata.stmc.pivot_table(index=['trial', 'direction'], aggfunc = np.median).unstack()
 
         if self.predictors == 'all':
             self.predictors = set(list(stsc_ave.columns) + list(stmc_ave.columns))
-        
-        scfeatures = [predictor for predictor in self.predictors if predictor in list(stsc_ave.columns)]
-        mcfeatures = [predictor for predictor in self.predictors if predictor in list(stmc_ave.columns)]
-        mcfeatures = [predictor for predictor in mcfeatures if predictor not in scfeatures]
 
-        self.predvals = pd.concat([stsc_ave[scfeatures].unstack(), stmc_ave[mcfeatures].unstack()], axis=1)
+        self.predvals = pd.DataFrame()
+        for pred in self.predictors:
+            measure, region = pred
+
+            if len(region) > 1:
+                self.predvals = pd.concat([self.predvals, stmc_ave[measure, region]], axis=1)
+            else:
+                self.predvals = pd.concat([self.predvals, stsc_ave[measure, region]], axis=1)
 
         self.labels = np.array(stsc_ave['encoding'])[::2]
-
-    
