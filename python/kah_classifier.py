@@ -1,14 +1,11 @@
 """ Class for applying classification techniques to Kahana data """
 
-from kah_data import KahData
 import numpy as np
 import pandas as pd
 from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import GridSearchCV
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import roc_auc_score
-from sklearn.model_selection import cross_val_score
-from sklearn.model_selection import StratifiedKFold
 from sklearn.preprocessing import StandardScaler
 
 class KahClassifier:
@@ -61,6 +58,9 @@ class KahClassifier:
 
         """
 
+        # Save hyperparameter values.
+        self.hyperparameters = hyperparameters
+
         # Get predictor values and trial labels.
         self._set_predictors_labels(kahdata)
 
@@ -72,40 +72,15 @@ class KahClassifier:
         # Scale features using the mean and variance of the training data.
         self._standardscale_features()
 
-        # For logistic regression.
-        if method == 'logistic':
-            self._logistic_regression(hyperparameters)
-
-    def _standardscale_features(self):
-        """ Scale features to have zero mean and unit variance. """
-
-        # Make scaler that stores mean and variance of the training data.
-        self.scaler = StandardScaler().fit(self.Xtrain)
-
-        # Scale training and test data using mean and variance of the training data.
-        self.Xtrain = self.scaler.transform(self.Xtrain)
-        self.Xtest = self.scaler.transform(self.Xtest)
-
-    def _logistic_regression(self, hyperparameters):
-        """ Classify using logistic regression. """
-
-        # Defaults for C values to test.
-        if not hyperparameters:
-            hyperparameters = {'C':[0.01, 0.1, 1, 10]}
-        
-        # Select best C value if multiple are provided.
-        if len(hyperparameters['C']) > 1:
-            # Create GridSearchCV object that will loop over C values.
-            clf = GridSearchCV(LogisticRegression(class_weight='balanced', random_state=self.seed), hyperparameters, scoring=self.scoring, cv=self.cv)
-    
-        # Otherwise, use the single value provided.
-        else:
-            clf = LogisticRegression(class_weight='balanced', random_state=self.seed, C=hyperparameters['C'][0])
+        # Create classifier object.
+        if method == 'logistic': # for logistic regression.
+            clf = self._logistic_regression()
 
         # Fit a model on all of the training data. In the case of multiple C, perform k-fold cross-validation on the training set.
         clf.fit(self.Xtrain, self.ytrain)
 
-        if len(hyperparameters['C']) > 1:
+        # Save GridSearch results, if necessary.
+        if self.grid:
             self.grid_results_ = clf.cv_results_
         
         # Get probability of class labels (forgotten in column 0, forgotten in column 1) for the test set.
@@ -120,6 +95,36 @@ class KahClassifier:
         # Save model coefficients.
         self.coef_ = clf.coef_
         self.intercept_ = clf.intercept_
+
+    def _standardscale_features(self):
+        """ Scale features to have zero mean and unit variance. """
+
+        # Make scaler that stores mean and variance of the training data.
+        self.scaler = StandardScaler().fit(self.Xtrain)
+
+        # Scale training and test data using mean and variance of the training data.
+        self.Xtrain = self.scaler.transform(self.Xtrain)
+        self.Xtest = self.scaler.transform(self.Xtest)
+
+    def _logistic_regression(self):
+        """ Classify using logistic regression. """
+
+        # Defaults for C values to test.
+        if not self.hyperparameters:
+            self.hyperparameters = {'C':[0.01, 0.1, 1, 10]}
+        
+        # Select best C value if multiple are provided.
+        if len(self.hyperparameters['C']) > 1:
+            # Create GridSearchCV object that will loop over C values.
+            self.grid = True
+            clf = GridSearchCV(LogisticRegression(class_weight='balanced', random_state=self.seed), self.hyperparameters, scoring=self.scoring, cv=self.cv)
+    
+        # Otherwise, use the single value provided.
+        else:
+            self.grid = False
+            clf = LogisticRegression(class_weight='balanced', random_state=self.seed, C=self.hyperparameters['C'][0])
+        
+        return clf
 
     def _set_predictors_labels(self, kahdata):
         """ Extract predictors of interest from KahData() object, aggregating across channels and channel pairs. 
