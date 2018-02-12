@@ -2,14 +2,14 @@
 
 import numpy as np
 import pandas as pd
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
 from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import GridSearchCV
-from sklearn.model_selection import train_test_split
 from sklearn.metrics import roc_auc_score
-from sklearn.preprocessing import StandardScaler
 
 class KahClassifier:
-    """ Predict trial outcome (remembered vs. forgotten) using electrophysiological features before and during stimulus presentation 
+    """ Predict trial outcome (remembered vs. forgotten) using electrophysiological features before and during stimulus presentation. 
     
     Parameters
     ----------
@@ -30,6 +30,14 @@ class KahClassifier:
         Features aggregated per trial and brain region. Used ultimately for classification.
     labels : 1D array
         Labels of remembered (1) vs. forgotten (0) for each trial. Used ultimately for classification.
+    grid_results_ : dict
+        If multiple hyperparameters were tested, results of the cross-validation per hyperparameter value.
+    prob_ : ntrial x 2 array
+        Predicted probabilities of forgotten (column 0) vs remembered (column 1) for holdout data.
+    roc_auc_ : float
+        Area under the ROC curve for holdout data.
+    estimator_ : classifier object
+        Final best classifier fit to all data.
 
     """
 
@@ -67,44 +75,45 @@ class KahClassifier:
         # Split data into a training and test set.
         # The training set will be used for k-fold cross validation to pick optimal hyperparameters.
         # The test set will be used to evaluate performance of a full model fit over the training set using the best hyperparameter.
-        self.Xtrain, self.Xtest, self.ytrain, self.ytest = train_test_split(self.predvals, self.labels, test_size=self.test_size, shuffle=True, stratify=self.labels, random_state=self.seed)
+        Xtrain, Xtest, ytrain, ytest = train_test_split(self.predvals, self.labels, test_size=self.test_size, shuffle=True, stratify=self.labels, random_state=self.seed)
 
         # Scale features using the mean and variance of the training data.
-        self._standardscale_features()
+        Xtrain, Xtest, scaler = self._standardscale_features(Xtrain, Xtest)
 
         # Create classifier object.
         if method == 'logistic': # for logistic regression.
             clf = self._logistic_regression()
 
         # Fit a model on all of the training data. In the case of multiple C, perform k-fold cross-validation on the training set.
-        clf.fit(self.Xtrain, self.ytrain)
+        clf.fit(Xtrain, ytrain)
 
         # Save GridSearch results, if necessary.
         if self.grid:
             self.grid_results_ = clf.cv_results_
         
         # Get probability of class labels (forgotten in column 0, forgotten in column 1) for the test set.
-        self.proba_ = clf.predict_proba(self.Xtest)
+        self.prob_ = clf.predict_proba(Xtest)
 
         # Calculate AUC of ROC curve for the test set.
-        self.roc_auc_ = roc_auc_score(self.ytest, self.proba_[:, 1], average='weighted')
+        self.roc_auc_ = roc_auc_score(ytest, self.prob_[:, 1], average='weighted')
 
         # Fit a model on all data, both training and test, re-scaled using training data.
-        clf.fit(self.scaler.transform(self.predvals), self.labels)
+        clf.fit(scaler.transform(self.predvals), self.labels)
 
-        # Save model coefficients.
-        self.coef_ = clf.coef_
-        self.intercept_ = clf.intercept_
+        # Save model.
+        self.estimator_ = clf
 
-    def _standardscale_features(self):
+    def _standardscale_features(self, Xtrain, Xtest):
         """ Scale features to have zero mean and unit variance. """
 
         # Make scaler that stores mean and variance of the training data.
-        self.scaler = StandardScaler().fit(self.Xtrain)
+        scaler = StandardScaler().fit(Xtrain)
 
         # Scale training and test data using mean and variance of the training data.
-        self.Xtrain = self.scaler.transform(self.Xtrain)
-        self.Xtest = self.scaler.transform(self.Xtest)
+        Xtrain = scaler.transform(Xtrain)
+        Xtest = scaler.transform(Xtest)
+
+        return (Xtrain, Xtest, scaler)
 
     def _logistic_regression(self):
         """ Classify using logistic regression. """
