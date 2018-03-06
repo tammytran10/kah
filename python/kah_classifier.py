@@ -5,6 +5,7 @@ import pandas as pd
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 from sklearn.linear_model import LogisticRegression
+from sklearn.linear_model import LogisticRegressionCV
 from sklearn.model_selection import GridSearchCV
 from sklearn.metrics import roc_auc_score
 
@@ -87,10 +88,6 @@ class KahClassifier:
         # Fit a model on all of the training data. In the case of multiple C, perform k-fold cross-validation on the training set.
         clf.fit(Xtrain, ytrain)
 
-        # Save GridSearch results, if necessary.
-        if self.grid:
-            self.grid_results_ = clf.cv_results_
-        
         # Get probability of class labels (forgotten in column 0, forgotten in column 1) for the test set.
         self.prob_ = clf.predict_proba(Xtest)
 
@@ -120,18 +117,9 @@ class KahClassifier:
 
         # Defaults for C values to test.
         if not self.hyperparameters:
-            self.hyperparameters = {'C':[0.01, 0.1, 1, 10]}
-        
-        # Select best C value if multiple are provided.
-        if len(self.hyperparameters['C']) > 1:
-            # Create GridSearchCV object that will loop over C values.
-            self.grid = True
-            clf = GridSearchCV(LogisticRegression(class_weight='balanced', random_state=self.seed), self.hyperparameters, scoring=self.scoring, cv=self.cv)
-    
-        # Otherwise, use the single value provided.
-        else:
-            self.grid = False
-            clf = LogisticRegression(class_weight='balanced', random_state=self.seed, C=self.hyperparameters['C'][0])
+            self.hyperparameters = {'C':10}
+
+        clf = LogisticRegressionCV(Cs=self.hyperparameters['C'], cv=self.cv, scoring=self.scoring, penalty='l2', solver='liblinear', class_weight='balanced', random_state=self.seed)
         
         return clf
 

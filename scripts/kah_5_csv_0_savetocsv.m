@@ -239,3 +239,4 @@ for isubj = 1:length(info.subj)
     disp('Saving.')
     util_cell2csv(filecurr, subjcurr, header, [])
 end
+disp('Done.')
