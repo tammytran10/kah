@@ -13,6 +13,7 @@ for isubj = 1:length(info.subj)
     end
 end
 
+%%
 save([info.path.processed.hd 'FR1_thetabands_0_1600_trials.mat'], 'amplitudes', 'thetapvals')
 %%
 pvals = nan(size(amplitudes{1}, 1), 1);
