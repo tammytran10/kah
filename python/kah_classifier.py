@@ -94,8 +94,11 @@ class KahClassifier:
         # Calculate AUC of ROC curve for the test set.
         self.roc_auc_ = roc_auc_score(ytest, self.prob_[:, 1], average='weighted')
 
-        # Fit a model on all data, both training and test, re-scaled using training data.
-        clf.fit(scaler.transform(self.predvals), self.labels)
+        # # Fit a model on all data, both training and test, re-scaled using training data.
+        # clf.fit(scaler.transform(self.predvals), self.labels)
+
+        # Fit a model on all data, both training and test, re-scaled using all data. 
+        clf.fit(StandardScaler().fit(self.predvals).transform(self.predvals), self.labels)
 
         # Save model.
         self.estimator_ = clf
