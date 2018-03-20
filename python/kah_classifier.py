@@ -79,7 +79,7 @@ class KahClassifier:
         Xtrain, Xtest, ytrain, ytest = train_test_split(self.predvals, self.labels, test_size=self.test_size, shuffle=True, stratify=self.labels, random_state=self.seed)
 
         # Scale features using the mean and variance of the training data.
-        Xtrain, Xtest, scaler = self._standardscale_features(Xtrain, Xtest)
+        Xtrain, Xtest, _ = self._standardscale_features(Xtrain, Xtest)
 
         # Create classifier object.
         if method == 'logistic': # for logistic regression.
@@ -93,9 +93,6 @@ class KahClassifier:
 
         # Calculate AUC of ROC curve for the test set.
         self.roc_auc_ = roc_auc_score(ytest, self.prob_[:, 1], average='weighted')
-
-        # # Fit a model on all data, both training and test, re-scaled using training data.
-        # clf.fit(scaler.transform(self.predvals), self.labels)
 
         # Fit a model on all data, both training and test, re-scaled using all data. 
         clf.fit(StandardScaler().fit(self.predvals).transform(self.predvals), self.labels)

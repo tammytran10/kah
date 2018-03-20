@@ -27,7 +27,13 @@ class KahData:
         Keep only channels and channel pairs in which theta was present. default: False
     enforce_phase : boolean, optional
         Keep only channel pairs in which there was significant theta phase encoding. default: False
-
+    theta_threshtype : string, optional
+        Detect theta channels based on 'pval' (binomial test, # of trials > 0.5), 'thresh' (% of trials with theta), or 'bump' (FOOOF bump
+        in average across trials). default: 'bump'
+    theta_thresh : float, optional
+        Threshold for detecting theta. For 'pval', this is the p-value threshold. For 'thresh', this is the % trials threshold. Ignored
+        for 'bump'. default: None
+    
     Attributes
     ----------
     csvpath : string
@@ -56,7 +62,7 @@ class KahData:
     for path in paths:
         exec(path + ' = pd.read_csv(paths[path])')
 
-    def __init__(self, subject='all', exclude_region=None, enforce_theta=False, enforce_phase=False):
+    def __init__(self, subject='all', exclude_region=None, enforce_theta=False, enforce_phase=False, theta_threshtype='bump', theta_thresh=None):
         """ Create a KahData() object. """
 
         # Set input parameters. 
@@ -64,6 +70,8 @@ class KahData:
         self.exclude_region = exclude_region
         self.enforce_theta = enforce_theta
         self.enforce_phase = enforce_phase
+        self.theta_threshtype = theta_threshtype
+        self.theta_thresh = theta_thresh
 
         # Extract data of interest based on subject, channel exclusion, and features of interest.
         self._set_data()
@@ -103,7 +111,18 @@ class KahData:
         """ Determine theta channels and remove non-theta channels, if necessary. """
 
         # Mark channels that have theta.
-        thetachan = self.sc[self.sc['pvalposttheta'] < 0.05]['channel']
+        if self.theta_threshtype == 'pval':
+            thetachan = self.sc[self.sc['pvalposttheta'] < self.theta_thresh]['channel']
+        elif self.theta_threshtype == 'thresh':
+            thetachan = []
+            for chan in self.sc['channel']:
+                ntheta_trial = np.sum(self.stsc[self.stsc['channel'] == chan]['posttheta'] > 0)
+                thetachan.append((ntheta_trial / len(self.stsc['trial'].unique())) > self.theta_thresh)
+            thetachan = self.sc[thetachan]['channel']
+        elif self.theta_threshtype == 'bump':
+            thetachan = self.sc[self.sc['thetabump']]['channel']
+        else:
+            raise ValueError('Threshold type not recognized for detecting theta channels.')
 
         for idata, dataset in enumerate(DATASETS):
             for theta, channel in zip(THETAS[idata], CHANNELS[idata]):
