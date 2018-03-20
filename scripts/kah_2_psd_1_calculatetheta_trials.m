@@ -9,6 +9,7 @@ clearvars('-except', 'info')
 
 % Choose time window.
 timewin = [-800, 0];
+padlabel = '_padded';
 
 % Choose to aggregate all theta peaks ('all') or just get the max peak ('max').
 pickpeak = 'all';
@@ -24,7 +25,7 @@ for isubj = 1:length(info.subj)
     subject = info.subj{isubj};
     
     % Load FOOOF output for each subject.
-    load([info.path.processed.hd subject '_FR1_fooof_' num2str(timewin(1)) '_' num2str(timewin(2)) '_padded.mat'], 'fooof')
+    load([info.path.processed.hd subject '_FR1_fooof_' num2str(timewin(1)) '_' num2str(timewin(2)) '_trials' padlabel '.mat'], 'fooof')
     [nchan, ntrial] = size(fooof);
     
     % For saving bands per channel per trial.
@@ -73,5 +74,5 @@ for isubj = 1:length(info.subj)
         end
     end
 end
-save([info.path.processed.hd 'FR1_thetabands_' num2str(timewin(1)) '_' num2str(timewin(2)) '_trials_padded.mat'], 'bands', 'amplitudes')
+save([info.path.processed.hd 'FR1_thetabands_' num2str(timewin(1)) '_' num2str(timewin(2)) '_trials' padlabel '.mat'], 'bands', 'amplitudes')
 disp('Done.')

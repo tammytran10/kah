@@ -7,13 +7,9 @@ info = kah_info;
 %%
 clearvars('-except', 'info')
 
-% Choose time window.
-timewin = [-800, 0];
-
 % Choose to aggregate all theta peaks ('all') or just get the max peak ('max').
 pickpeak = 'all';
 
-%%
 % Set default theta band.
 default = [4, 8];
 
@@ -24,7 +20,7 @@ for isubj = 1:length(info.subj)
     subject = info.subj{isubj};
     
     % Load FOOOF output for each subject.
-    load([info.path.processed.hd subject '_FR1_fooof_' num2str(timewin(1)) '_' num2str(timewin(2)) '.mat'], 'fooof')
+    load([info.path.processed.hd subject '_FR1_fooof_-800_1600_chans.mat'], 'fooof')
 
     % For saving bands per channel.
     nchan = length(fooof);
@@ -70,5 +66,5 @@ for isubj = 1:length(info.subj)
         amplitudes{isubj}(ichan) = amp;
     end 
 end
-
-save([info.path.processed.hd 'FR1_thetabands_-800_1600.mat'], 'bands', 'amplitudes')
+save([info.path.processed.hd 'FR1_thetabands_-800_1600_chans.mat'], 'bands', 'amplitudes')
+disp('Done.')

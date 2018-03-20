@@ -27,3 +27,5 @@ cfg.viewmode  = 'vertical';
 cfg.ylim      = [-40 40];  
 cfg.blocksize = 4;         
 ft_databrowser(cfg, data);
+
+%%% ADD BROKEN CHANNELS TO KAH_INFO.M

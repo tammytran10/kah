@@ -14,7 +14,7 @@ nregion = 3;
 [encodingtime, encodingstrength, pac] = deal(cell(length(info.subj), nregion));
 
 % Get individual theta center frequencies.
-load([info.path.processed experiment '_thetabands_-800_1600.mat'], 'bands')
+load([info.path.processed experiment '_thetabands_-800_1600_chans.mat'], 'bands')
 thetacfs = cellfun(@(x) nanmean(mean(x, 2)), bands);
 
 % Set number of permutations for PAC.

@@ -84,11 +84,14 @@ clear thetapvals
 % Load HFA p-values.
 load([info.path.processed.hd 'FR1_hfa.mat'], 'hfapval');
 
+% Load which theta center frequencies.
+load([info.path.processed.hd 'FR1_thetabands_-800_1600_chans.mat'])
+
 % Load channel and trial information.
 load([info.path.processed.hd 'FR1_chantrialinfo.mat'], 'chanregions', 'chans')
 
 % Set names of metrics.
-header = {'subject', 'age', 'channel', 'region', 'pvalpretheta', 'pvalposttheta', 'pvalhfa'};
+header = {'subject', 'age', 'channel', 'region', 'pvalpretheta', 'pvalposttheta', 'pvalhfa', 'thetabump'};
 
 % Build CSV.
 csv = [];
@@ -103,7 +106,8 @@ for isubj = 1:length(info.subj)
     for ipair = 1:nchan
         % Build current line.
         linecurr = {info.subj{isubj}, info.age(isubj), chans{isubj}{ipair}, chanregions{isubj}{ipair}, ...
-            prethetapvals{isubj}(ipair), postthetapvals{isubj}(ipair), hfapval{isubj}(ipair)};
+            prethetapvals{isubj}(ipair), postthetapvals{isubj}(ipair), hfapval{isubj}(ipair), ...
+            ~isnan(bands{isubj}(ipair, 1))};
         linecurr = cellfun(@string, linecurr, 'UniformOutput', false); % needs to be strings
         
         % Save current line.
