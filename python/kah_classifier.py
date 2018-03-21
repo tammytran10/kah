@@ -8,6 +8,7 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.linear_model import LogisticRegressionCV
 from sklearn.model_selection import GridSearchCV
 from sklearn.metrics import roc_auc_score
+from sklearn import utils
 
 class KahClassifier:
     """ Predict trial outcome (remembered vs. forgotten) using electrophysiological features before and during stimulus presentation. 
@@ -52,7 +53,7 @@ class KahClassifier:
         self.test_size = test_size
         self.seed = seed
     
-    def classify(self, kahdata, method, hyperparameters=None):
+    def classify(self, kahdata, method, hyperparameters=None, resample=None, nresample=1000):
         """ Predict trial outcome using classifier type of interest. 
         
         Parameters
@@ -64,6 +65,10 @@ class KahClassifier:
         hyperparameters : dict, optional
             Hyperparameters to try ({'C':[0.1, 1, 10, 100], 'kernel':['linear', 'rbf]}). 
             Defaults determined by individual classifier functions.
+        resample : string, optional
+            Method to resample test set. Options are 'bootstrap', 'permute', or None. default: None
+        nresample : int, optional
+            Number of resampling runs to do, ignored if no resampling. default: 1000
 
         """
 
@@ -84,6 +89,8 @@ class KahClassifier:
         # Create classifier object.
         if method == 'logistic': # for logistic regression.
             clf = self._logistic_regression()
+        else:
+            raise ValueError('Classification method not supported.')
 
         # Fit a model on all of the training data. In the case of multiple C, perform k-fold cross-validation on the training set.
         clf.fit(Xtrain, ytrain)
@@ -94,6 +101,31 @@ class KahClassifier:
         # Calculate AUC of ROC curve for the test set.
         self.roc_auc_ = roc_auc_score(ytest, self.prob_[:, 1], average='weighted')
 
+        # Calculate resampled AUC values, if necessary.
+        if resample:
+            # For saving output.
+            self.resample = resample
+            self.prob_resample_ = np.empty([len(ytest), 2, nresample])
+            self.roc_auc_resample_ = np.empty([nresample])
+
+            for iresample in range(nresample):
+                if resample == 'bootstrap':
+                    # Bootstrap both Xtest and ytest to get precision of AUC measurement
+                    Xtest_resample, ytest_resample = utils.resample(Xtest, ytest, random_state=iresample)
+                elif resample == 'permute':
+                    # Permute ytest labels to get null distribution of AUC.
+                    Xtest_resample = Xtest
+                    ytest_resample = utils.shuffle(ytest, random_state=iresample)
+                else:
+                    raise ValueError('Resampling method not supported.')
+            
+                # Get probability of class labels (forgotten in column 0, forgotten in column 1) for the resampled test set.
+                prob_resample = clf.predict_proba(Xtest_resample)
+                self.prob_resample_[:, :, iresample] = prob_resample
+
+                # Calculate AUC of ROC curve for the resampled test set.
+                self.roc_auc_resample_[iresample] = roc_auc_score(ytest_resample, prob_resample[:, 1], average='weighted')
+            
         # Fit a model on all data, both training and test, re-scaled using all data. 
         clf.fit(StandardScaler().fit(self.predvals).transform(self.predvals), self.labels)
 
