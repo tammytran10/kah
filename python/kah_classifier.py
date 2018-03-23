@@ -10,6 +10,19 @@ from sklearn.model_selection import GridSearchCV
 from sklearn.metrics import roc_auc_score
 from sklearn import utils
 
+PREDICTORS_ALL =  [
+                    ('preslope', 'T'), 
+                    ('preslope', 'F'), 
+                    ('posthfa', 'T'), 
+                    ('posthfa', 'F'),
+                    ('normtspac', 'T'), 
+                    ('normtspac', 'F'),
+                    ('normtspacmax', 'TT'), 
+                    ('normtspacmax', 'TF'), 
+                    ('normtspacmax', 'FT'), 
+                    ('normtspacmax', 'FF')
+                ]
+
 class KahClassifier:
     """ Predict trial outcome (remembered vs. forgotten) using electrophysiological features before and during stimulus presentation. 
     
@@ -171,7 +184,7 @@ class KahClassifier:
 
         # If all predictors are being used, get tuples of all the column names.
         if self.predictors == 'all':
-            self.predictors = set(list(stsc_ave.columns) + list(stmc_ave.columns))
+            self.predictors = PREDICTORS_ALL
 
         # Initialize data frame.
         self.predvals = pd.DataFrame()
