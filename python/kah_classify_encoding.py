@@ -1,20 +1,12 @@
 import numpy as np
 import pickle
+from kah_save_subject_data import SUBJECT_FILES
 from kah_classifier import KahClassifier
 
-if __name__ == "__main__":
-    # Pick subject data based on exclusion criteria.
-    with open('kah_subjects_theta.pickle', 'rb') as file:
-        subjects = pickle.load(file) 
-
-    # Set number of iterations per subject to run.
-    nseed = 1000
-
-    # Set number of permutations per iteration to run.
-    nresample = 1000
-
-    auc_allfeatures = np.empty([len(subjects), nseed])
-    auc_resample_allfeatures = np.empty([len(subjects), nseed, nresample])
+def classify_encoding(subjects, nseed, nresample, predictors, filename):  
+    auc = np.empty([len(subjects), nseed])
+    if nresample > 0:
+        auc_resample = np.empty([len(subjects), nseed, nresample])
 
     # Per subject, fit Logistic Regression models using various values of C. 
     for isubj in range(len(subjects)):    
@@ -25,12 +17,26 @@ if __name__ == "__main__":
         for seed in range(nseed):
             if np.mod(seed, 500) == 0:
                 print(seed)
-            clf = KahClassifier(predictors='all', seed=seed)
+            clf = KahClassifier(predictors=predictors, seed=seed)
             clf.classify(subjects[isubj], 'logistic', hyperparameters=None, resample='permute', nresample=nresample)
-            auc_allfeatures[isubj, seed]= clf.roc_auc_
-            auc_resample_allfeatures[isubj, seed, :] = clf.roc_auc_resample_
+            auc[isubj, seed]= clf.roc_auc_
+            if nresample > 0:
+                auc_resample[isubj, seed, :] = clf.roc_auc_resample_
 
     # Save to disk.
-    kah_allfeatures_resample = {'auc_allfeatures':auc_allfeatures, 'auc_resample_allfeatures':auc_resample_allfeatures}
-    with open('kah_allfeatures_resample.pickle', 'wb') as file:
-        pickle.dump(kah_allfeatures_resample, file) 
+    kah = {'auc':auc, 'auc_resample':auc_resample}
+    with open(filename, 'wb') as file:
+        pickle.dump(kah, file) 
+
+if __name__ == "__main__":
+    # Pick subject data based on exclusion criteria.
+    subjects = 'theta'
+    nseed = 1000
+    nresample = 1000
+    predictors = 'all'
+    filename = 'kah_nseed_1000_nresample_1000_predictors_all.pickle'
+
+    with open(SUBJECT_FILES[subjects], 'rb') as file:
+        subjects = pickle.load(file) 
+
+    classify_encoding(subjects, nseed, nresample, predictors, filename)
