@@ -15,7 +15,6 @@ if __name__ == "__main__":
 
     auc_allfeatures = np.empty([len(subjects), nseed])
     auc_resample_allfeatures = np.empty([len(subjects), nseed, nresample])
-    Cbest_allfeatures = np.empty([len(subjects), nseed])
 
     # Per subject, fit Logistic Regression models using various values of C. 
     for isubj in range(len(subjects)):    
@@ -30,10 +29,8 @@ if __name__ == "__main__":
             clf.classify(subjects[isubj], 'logistic', hyperparameters=None, resample='permute', nresample=nresample)
             auc_allfeatures[isubj, seed]= clf.roc_auc_
             auc_resample_allfeatures[isubj, seed, :] = clf.roc_auc_resample_
-            Cbest_allfeatures[isubj, seed] = clf.estimator_.C_[0]
 
     # Save to disk.
-    kah_allfeatures_resample = {'auc_allfeatures':auc_allfeatures, 'auc_resample_allfeatures':auc_resample_allfeatures,
-                'Cbest_allfeatures':Cbest_allfeatures}
+    kah_allfeatures_resample = {'auc_allfeatures':auc_allfeatures, 'auc_resample_allfeatures':auc_resample_allfeatures}
     with open('kah_allfeatures_resample.pickle', 'wb') as file:
         pickle.dump(kah_allfeatures_resample, file) 
