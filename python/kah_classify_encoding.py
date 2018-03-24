@@ -1,9 +1,18 @@
+""" Script for performing classification of encoded vs. forgotten trials for Kahana data. """
+
 import numpy as np
 import pickle
 from kah_save_subject_data import SUBJECT_FILES
 from kah_classifier import KahClassifier
 
-def classify_encoding(subjects, nseed, nresample, predictors, filename):  
+def classify_encoding(subj_type, nseed, nresample, predictors, filename):  
+    """ Classify data using given subject data and desired predictors, with or without resampling, repeated nseed number of times. """
+
+    with open(SUBJECT_FILES[subj_type[0]], 'rb') as file:
+        subjects = pickle.load(file) 
+        if subj_type[1]:
+            subjects = [subj for subj in subjects if subj.subject not in subj_type[1]]
+
     auc = np.empty([len(subjects), nseed])
     if nresample > 0:
         auc_resample = np.empty([len(subjects), nseed, nresample])
@@ -30,13 +39,10 @@ def classify_encoding(subjects, nseed, nresample, predictors, filename):
 
 if __name__ == "__main__":
     # Pick subject data based on exclusion criteria.
-    subjects = 'theta'
+    subj_type = ('theta', ['R1033D', 'R1080E', 'R1120E']) # exclude subjects with not enough theta channels
     nseed = 1000
     nresample = 1000
     predictors = 'all'
-    filename = 'kah_nseed_1000_nresample_1000_predictors_all.pickle'
+    filename = 'kah_theta_all_nseed_1000_nresample_1000_predictors_all.pickle'
 
-    with open(SUBJECT_FILES[subjects], 'rb') as file:
-        subjects = pickle.load(file) 
-
-    classify_encoding(subjects, nseed, nresample, predictors, filename)
+    classify_encoding(subj_type, nseed, nresample, predictors, filename)

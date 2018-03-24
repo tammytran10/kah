@@ -9,7 +9,7 @@ SUBJECT_TYPES = ['all', 'theta', 'theta_phase']
 # Files to save to.
 SUBJECT_FILES = {}
 for subj_type in SUBJECT_TYPES:
-    SUBJECT_FILES[subj_type] = 'kah_subjects_{}.pickle'.format(subj_type)
+    SUBJECT_FILES[subj_type] = 'data/kah_subjects_{}.pickle'.format(subj_type)
 
 if __name__ == "__main__":
     # Load subject data.
