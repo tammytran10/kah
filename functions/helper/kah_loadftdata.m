@@ -6,6 +6,8 @@ function [data, trialinfo, chans, times, temporal, frontal] = kah_loadftdata(inf
 switch datatype
     case 'thetaphase'
         filecurr = [info.path.processed.hd '-1000_2750/' subject '_FR1_thetaphase.mat'];
+    case 'thetaamp'
+        filecurr = [info.path.processed.hd '-1000_2750/' subject '_FR1_thetaamp.mat'];
     case 'broadband'
         filecurr = [info.path.processed.hd '-1000_2750/' subject '_FR1_broadband.mat'];
     case 'gammaamp'
