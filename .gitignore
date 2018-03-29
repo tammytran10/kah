@@ -1,0 +1,7 @@
+*.pickle
+*.m~
+python/.cache/
+python/.coverage
+python/.ipynb_checkpoints/
+python/__pycache__/
+python/figures/
