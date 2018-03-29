@@ -1,5 +1,5 @@
 % Script for loading raw Kahana data, applying filters, epoching, and removing bad trials.
-% Options are for broadband (< 200 Hz), theta phase (with individual bands option), and high gamma amplitude (multiple bands).
+% Options are for broadband (< 200 Hz), theta phase/amp (with individual bands option), and high gamma amplitude (multiple bands).
 % The multiple bands for high gamma can be combined in kah_1_epoch_1_calculatehfa.m
 
 clear; clc
@@ -15,7 +15,8 @@ experiment = 'FR1';
 
 % Set which filters to apply and files to save.
 dobroadband = 0;
-dothetaphase = 1;
+dothetaphase = 0;
+dothetaamp = 1;
 dogammaamp = 0;
 
 % Set whether to filter for theta using individual filters. In this case, kah_2_psd_1_calclatethetabands.m should have been run.
@@ -26,9 +27,9 @@ domultigamma = 1;
 
 %%
 % Set theta bands (individual or default of 4-8 Hz), if necessary.
-if dothetaphase
+if dothetaphase || dothetaamp
     if doindividualtheta
-        load([info.path.processed.hd 'FR1_thetabands_-800_1600.mat'])
+        load([info.path.processed.hd 'FR1_thetabands_-800_1600_chans.mat'])
         thetacfs = cellfun(@(x) nanmean(mean(x, 2)), bands);
     else
         thetacfs = ones(length(info.subj), 1) * 6;
@@ -54,11 +55,11 @@ for isubj = 1:length(info.subj)
     subject = info.subj{isubj};
     disp([num2str(isubj) ' ' subject])
             
-    % Pre-allocate. Processing for broadband (< 200 Hz), theta (4-8 Hz) phase,
+    % Pre-allocate. Processing for broadband (< 200 Hz), theta (4-8 Hz) phase/amplitude,
     % and high gamma (80-150 Hz) amplitude.
     broadband  = struct;
     thetaphase = struct;
-
+    thetaamp = struct;
     gammaamp   = cell(size(gammabands, 1), 1); % each element is a Fieldtrip struct, one per narrow band
 
     % Get broadband activity, theta phase, and gamma amplitude for each session.
@@ -89,8 +90,7 @@ for isubj = 1:length(info.subj)
         cfg.headerfile   = info.(subject).(experiment).session(isess).headerfile;
         cfg.datafile     = info.(subject).(experiment).session(isess).datadir;
         cfg.artfctdef.xxx.artifact = ...
-            [info.(subject).(experiment).session(isess).badsegment; ... 
-            info.(subject).(experiment).session(isess).jumps];
+            info.(subject).(experiment).session(isess).badsegment;
         cfg = ft_rejectartifact(cfg);
 
         % Extract trial info for clean encoding trials.
@@ -151,7 +151,7 @@ for isubj = 1:length(info.subj)
         end
 
         % Set theta bandpass filtering parameters and preprocess.
-        if dothetaphase
+        if dothetaphase || dothetaamp
             if isfield(cfg, 'lpfilter')
                 cfg = rmfield(cfg, {'lpfilter', 'lpfreq', 'lpfilttype'});
             end
@@ -159,16 +159,34 @@ for isubj = 1:length(info.subj)
             cfg.bpfreq        = thetabands(isubj, :);
             cfg.bpfilttype    = 'firws';
             cfg.bpfiltwintype = 'hamming';
-            cfg.hilbert       = 'angle';    
-            thetaphasecurr = ft_preprocessing(cfg);
-
-            % Combine trials from multiple sessions, if necessary.
-            if isess == 1
-                thetaphase = thetaphasecurr;
-            else
-                thetaphase = ft_appenddata([], thetaphase, thetaphasecurr);
+            
+            % Calculate theta phase.
+            if dothetaphase
+                cfg.hilbert = 'angle';    
+                thetacurr   = ft_preprocessing(cfg);
+                
+                % Combine trials from multiple sessions, if necessary.
+                if isess == 1
+                    thetaphase = thetacurr;
+                else
+                    thetaphase = ft_appenddata([], thetaphase, thetacurr);
+                end
+                clear thetacurr
             end
-            clear thetaphasecurr
+            
+            % Calculate theta amplitude.
+            if dothetaamp
+                cfg.hilbert = 'abs';
+                thetacurr   = ft_preprocessing(cfg);
+                
+                % Combine trials from multiple sessions, if necessary.
+                if isess == 1
+                    thetaamp = thetacurr;
+                else
+                    thetaamp = ft_appenddata([], thetaamp, thetacurr);
+                end
+                clear thetacurr
+            end
         end
 
         % Set high gamma filtering parameters (multiple bands) and preprocess.
@@ -208,6 +226,11 @@ for isubj = 1:length(info.subj)
         save([info.path.processed.hd '-1000_2750/' subject '_' experiment '_thetaphase.mat'], 'thetaphase', '-v7.3')
     end
 
+    % Save theta amplitude data, if necessary.
+    if dothetaamp
+        save([info.path.processed.hd '-1000_2750/' subject '_' experiment '_thetaamp.mat'], 'thetaamp', '-v7.3')
+    end
+    
     % Save gamma amplitude data, if necessary.
     if dogammaamp     
         if ~domultigamma
