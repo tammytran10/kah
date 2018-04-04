@@ -120,21 +120,16 @@ util_cell2csv([info.path.csv 'kah_singlechannel.csv'], csv, header)
 clearvars('-except', 'info')
 
 % Load pair p-values for tsPAC.
-load([info.path.processed.hd 'FR1_tspac_between_0_1600.mat'], 'tspac');
-
-% Load erPAC.
-load([info.path.processed.hd 'FR1_erpac_between.mat'], 'erpac');
+load([info.path.processed.hd 'FR1_pac_between_ts_0_1600_cf.mat'], 'tspac');
 
 % Load phase-encoding.
-load([info.path.processed.hd 'FR1_phaseencoding_0_1600.mat'], 'phaseencoding');
+load([info.path.processed.hd 'FR1_phaseencoding_0_1600_cf.mat'], 'phaseencoding');
 
 % Load channel and trial information.
 load([info.path.processed.hd 'FR1_chantrialinfo.mat'], 'pairs', 'pairregions')
 
 % Set names of metrics.
 header = {'subject', 'age', 'pair', 'channelA', 'channelB', 'regionA', 'regionB', 'pvaltspacAB', 'pvaltspacBA', ...
-    'erpacAB_remembered_stim', 'erpacAB_forgotten_stim', 'erpacAB_remembered_phase', 'erpacAB_forgotten_phase', ...
-    'erpacBA_remembered_stim', 'erpacBA_forgotten_stim', 'erpacBA_remembered_phase', 'erpacBA_forgotten_phase', ...
     'encodingonset', 'encodinglength', 'encodingstrength', 'encodingepisodes'};
 
 % Build CSV.
@@ -152,8 +147,6 @@ for isubj = 1:length(info.subj)
         linecurr = {info.subj{isubj}, info.age(isubj), ipair, pairs{isubj}{ipair, 1}, pairs{isubj}{ipair, 2}, ...
             pairregions{isubj}{ipair, 1}, pairregions{isubj}{ipair, 2}, ...
             tspac{isubj}.AB.pvalpair(ipair), tspac{isubj}.BA.pvalpair(ipair), ...
-            erpac{isubj}.AB.remembered.stim(ipair), erpac{isubj}.AB.forgotten.stim(ipair), erpac{isubj}.AB.remembered.encoding(ipair), erpac{isubj}.AB.forgotten.encoding(ipair), ...
-            erpac{isubj}.BA.remembered.stim(ipair), erpac{isubj}.BA.forgotten.stim(ipair), erpac{isubj}.BA.remembered.encoding(ipair), erpac{isubj}.BA.forgotten.encoding(ipair), ...
             phaseencoding{isubj}.onset(ipair), phaseencoding{isubj}.time(ipair), phaseencoding{isubj}.strength(ipair), phaseencoding{isubj}.nepisode(ipair)};
         linecurr = cellfun(@string, linecurr, 'UniformOutput', false); % needs to be strings
         
@@ -180,7 +173,7 @@ disp('Done.')
 clearvars('-except', 'info')
 
 % Load tsPAC.
-load([info.path.processed.hd 'FR1_tspac_between_0_1600.mat'], 'tspac');
+load([info.path.processed.hd 'FR1_pac_between_ts_0_1600_cf.mat'], 'tspac');
 
 % Load channel and trial information.
 load([info.path.processed.hd 'FR1_chantrialinfo.mat'], 'pairs', 'pairregions', 'encoding')
