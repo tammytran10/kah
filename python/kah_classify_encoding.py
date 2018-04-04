@@ -4,6 +4,7 @@ import numpy as np
 import pickle
 from kah_save_subject_data import SUBJECT_FILES
 from kah_classifier import KahClassifier
+from kah_data import SUBJECTS
 
 def classify_encoding(subj_type, nseed, nresample, predictors, filename):  
     """ Classify data using given subject data and desired predictors, with or without resampling, repeated nseed number of times. """
@@ -11,7 +12,7 @@ def classify_encoding(subj_type, nseed, nresample, predictors, filename):
     with open(SUBJECT_FILES[subj_type[0]], 'rb') as file:
         subjects = pickle.load(file) 
         if subj_type[1]:
-            subjects = [subj for subj in subjects if subj.subject not in subj_type[1]]
+            subjects = [subj for subj in subjects if subj.subject in subj_type[1]]
 
     auc = np.empty([len(subjects), nseed])
     if nresample > 0:
@@ -33,13 +34,20 @@ def classify_encoding(subj_type, nseed, nresample, predictors, filename):
                 auc_resample[isubj, seed, :] = clf.roc_auc_resample_
 
     # Save to disk.
-    kah = {'auc':auc, 'auc_resample':auc_resample}
+    kah = {'auc':auc, 'auc_resample':auc_resample, 'subject_id':[subj.subject for subj in subjects], 'predictors':predictors}
     with open(filename, 'wb') as file:
         pickle.dump(kah, file) 
 
 if __name__ == "__main__":
-    # Pick subject data based on exclusion criteria.
-    subj_type = ('theta', ['R1033D', 'R1080E', 'R1120E']) # exclude subjects with not enough theta channels
+    # Pick subject data.
+    no_theta = ['R1033D', 'R1080E', 'R1120E']
+    with_theta = [subj for subj in SUBJECTS if subj not in no_theta]
+    bad_auc = ['R1059J', 'R1149N', 'R1162N', 'R1167M', 'R1175N']
+    good_auc = [subj for subj in SUBJECTS if subj not in bad_auc and subj not in no_theta]
+    non_theta = ['R1020J', 'R1033D', 'R1034D', 'R1080E', 'R1154D', 'R1167M']
+
+    # Tuple format is (data type, subjects to include)
+    subj_type = ('theta', with_theta)
     nseed = 1000
     nresample = 1000
     predictors = 'all'

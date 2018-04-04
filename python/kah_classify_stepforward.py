@@ -3,13 +3,14 @@ import pickle
 from kah_save_subject_data import SUBJECT_FILES
 from kah_classifier import KahClassifier, PREDICTORS_ALL
 import os 
+from kah_data import SUBJECTS
 
 def classify_stepforward(subj_type, nseed, predictors, foldername):  
     # Pick subject data based on exclusion criteria.
     with open(SUBJECT_FILES[subj_type[0]], 'rb') as file:
         subjects = pickle.load(file) 
         if subj_type[1]:
-            subjects = [subj for subj in subjects if subj.subject not in subj_type[1]]
+            subjects = [subj for subj in subjects if subj.subject in subj_type[1]]
 
     filename = foldername + '/kah_stepforward_npred{}_ipred{}.pickle'
 
@@ -45,7 +46,7 @@ def classify_stepforward(subj_type, nseed, predictors, foldername):
                     auc_subset[isubj, seed] = clf.roc_auc_
                 
             # Save each new feature combo to disk.
-            kah_stepforward = {'auc_subset':auc_subset, 'predictors_available':predictors_available}
+            kah_stepforward = {'auc_subset':auc_subset, 'predictors_available':predictors_available, 'subject_id':[subj.subject for subj in subjects]}
             with open(filename.format(npred, ipred), 'wb') as file:
                 pickle.dump(kah_stepforward, file) 
         
@@ -66,8 +67,14 @@ def _get_top_feature(filename, npred, predictors_available):
 
 if __name__ == "__main__":
     # Pick subject data based on exclusion criteria.
-    subj_type = ('theta', ['R1033D', 'R1080E', 'R1120E', # not enough theta channels
-    'R1059J', 'R1149N', 'R1162N', 'R1167M', 'R1175N']) # classification poor
+ 
+    no_theta = ['R1033D', 'R1080E', 'R1120E']
+    bad_auc = ['R1059J', 'R1149N', 'R1162N', 'R1167M', 'R1175N']
+    good_auc = [subj for subj in SUBJECTS if subj not in bad_auc and subj not in no_theta]
+    non_theta = ['R1020J', 'R1033D', 'R1034D', 'R1080E', 'R1154D', 'R1167M']
+
+    # Tuple format is (data type, subjects to include)
+    subj_type = ('theta', good_auc)
     nseed = 200
     predictors = 'all'
     foldername = 'stepforward_theta_classifiableonly_nseed_200'
