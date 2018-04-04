@@ -6,7 +6,7 @@ function [data, trialinfo, chans, times, temporal, frontal] = kah_loadftdata(inf
 % Find subject file to load.
 pathname = [info.path.processed.hd subject '/data/' subject '_FR1_'];
 
-if datatype == 'hfa'
+if strcmpi(datatype, 'hfa')
     filecurr = [pathname 'hfa_-800_1600.mat'];
 else
     filecurr = [pathname datatype '_-1000_2750.mat'];
