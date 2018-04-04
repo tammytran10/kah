@@ -5,3 +5,6 @@ python/.coverage
 python/.ipynb_checkpoints/
 python/__pycache__/
 python/figures/
+python/fooof/
+kah_playground.m
+kah_plot_plotfilters.m
