@@ -20,7 +20,7 @@ for isubj = 1:length(info.subj)
     subject = info.subj{isubj};
     
     % Load FOOOF output for each subject.
-    load([info.path.processed.hd subject '_FR1_fooof_-800_1600_chans.mat'], 'fooof')
+    load([info.path.processed.hd subject '/fooof/' subject '_FR1_fooof_-800_1600_chans.mat'], 'fooof')
 
     % For saving bands per channel.
     nchan = length(fooof);
