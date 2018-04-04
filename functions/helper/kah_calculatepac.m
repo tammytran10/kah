@@ -16,7 +16,7 @@ thetaphase = thetaphase(:, timewin(1):timewin(2), :);
 hfaamp = hfaamp(:, timewin(1):timewin(2), :);
 
 % Load samples to shift by. 
-shifttrials = matfile([clusterpath 'shifttrials/' subject '_FR1__pac_between_ts_trialshifts_default.mat']);
+shifttrials = matfile([clusterpath 'shifttrials/' subject '_FR1_pac_between_ts_trialshifts_default.mat']);
 shifts = squeeze(shifttrials.shifttrials(pairnum, :, :, :));
 nsurrogate = size(shifts, 3);
 
