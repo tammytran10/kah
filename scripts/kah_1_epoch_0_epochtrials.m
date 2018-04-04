@@ -19,26 +19,34 @@ dothetaphase = 0;
 dothetaamp = 1;
 dogammaamp = 0;
 
-% Set whether to filter for theta using individual filters. In this case, kah_2_psd_1_calclatethetabands.m should have been run.
-doindividualtheta = 1;
+% Set whether to filter for theta using individual filters. In this case, kah_2_psd_1_calclatetheta_chans.m should have been run.
+doindividualtheta = 0;
 
 % Set whether to use multiple gamma bands, or one canonical.
 domultigamma = 1;
 
+% Set time window to epoch around word onset in ms.
+timewin = [-1000; 2750];
+
 %%
 % Set theta bands (individual or default of 4-8 Hz), if necessary.
 if dothetaphase || dothetaamp
-    if doindividualtheta
+    if doindividualtheta % individual center frequency
         load([info.path.processed.hd 'FR1_thetabands_-800_1600_chans.mat'])
         thetacfs = cellfun(@(x) nanmean(mean(x, 2)), bands);
-    else
+        thetalabel = 'cf';
+        
+    else % canonical center frequency
         thetacfs = ones(length(info.subj), 1) * 6;
+        thetalabel = 'canon';
     end
+    
+    % Set passband around center frequency.
     thetabands = [thetacfs - 2, thetacfs + 2];
 end
 
-% Set gamma bands to multiple 20-Hz wide bands, or one canonical.
-if domultigamma
+% Set gamma bands to multiple 20-Hz wide bands, or one canonical, if necessary.
+if domultigamma % multiple bands
     gammabands = ...
             [80, 100; ...
             90, 110; ...
@@ -46,8 +54,11 @@ if domultigamma
             110, 130; ...
             120, 140; ...
             130, 150]; 
-else
+    gammalabel = 'multi';
+
+else % one canonical band
     gammabands = [80, 150];
+    gammalabel = 'canon';
 end
     
 % Preprocess data per subject.
@@ -55,7 +66,7 @@ for isubj = 1:length(info.subj)
     subject = info.subj{isubj};
     disp([num2str(isubj) ' ' subject])
             
-    % Pre-allocate. Processing for broadband (< 200 Hz), theta (4-8 Hz) phase/amplitude,
+    % Pre-allocate. Processing for broadband (< 200 Hz), theta (4-8 Hz or individual) phase/amplitude,
     % and high gamma (80-150 Hz) amplitude.
     broadband  = struct;
     thetaphase = struct;
@@ -64,12 +75,13 @@ for isubj = 1:length(info.subj)
 
     % Get broadband activity, theta phase, and gamma amplitude for each session.
     for isess = 1:length(info.(subject).(experiment).session)
+        
         % Specify trial windows.
         cfg = [];
         cfg.header      = read_upennram_header(info.(subject).(experiment).session(isess).headerfile);
         cfg.event       = read_upennram_event(info.(subject).(experiment).session(isess).eventfile);
-        cfg.encprestim  = 1;    % during encoding, the period in seconds before word onset
-        cfg.encduration = 2.75; % during encoding, the period in seconds after word onset
+        cfg.encprestim  = abs(timewin(1))/1000;    % during encoding, the period in seconds before word onset
+        cfg.encduration = abs(timewin(2))/1000; % during encoding, the period in seconds after word onset
         cfg.recprestim  = 1;    % during recall, the period in seconds before verbalization
         cfg.recduration = 0;    % during recall, the period in seconds after verbalization 
 
@@ -132,16 +144,20 @@ for isubj = 1:length(info.subj)
         cfg.bsfiltord   = 2;
         cfg.bsfiltdir   = 'twopass';
         
-        % Set lowpass filtering parameters and preprocess.
+        % Get broadband data.
         if dobroadband
+            % Remove pre-existing filter parameters.
             if isfield(cfg, 'bpfilter')
                 cfg = rmfield(cfg, {'bpfilter', 'bpfreq', 'bpfilttype'});
             end
+            
+            % Set lowpass filtering parameters and preprocess.
             cfg.lpfilter    = 'yes';
             cfg.lpfreq      = 200;
             cfg.lpfilttype  = 'firws';
             broadbandcurr = ft_preprocessing(cfg);
 
+            % Combine trials from multiple sessions, if necessary.
             if isess == 1
                 broadband = broadbandcurr;
             else
@@ -150,11 +166,14 @@ for isubj = 1:length(info.subj)
             clear broadbandcurr
         end
 
-        % Set theta bandpass filtering parameters and preprocess.
+        % Get thetaband data.
         if dothetaphase || dothetaamp
+            % Remove pre-existing filter parameters.
             if isfield(cfg, 'lpfilter')
                 cfg = rmfield(cfg, {'lpfilter', 'lpfreq', 'lpfilttype'});
             end
+            
+            % Set theta bandpass filtering parameters.
             cfg.bpfilter      = 'yes';
             cfg.bpfreq        = thetabands(isubj, :);
             cfg.bpfilttype    = 'firws';
@@ -189,14 +208,15 @@ for isubj = 1:length(info.subj)
             end
         end
 
-        % Set high gamma filtering parameters (multiple bands) and preprocess.
+        % Get gamma-band data.
         if dogammaamp
             for iband = 1:size(gammabands, 1)
-                % Set gamma bandpass filtering parameters and preprocess.
+                % Remove pre-existing filter parameters.
                 if isfield(cfg, 'lpfilter')
                     cfg = rmfield(cfg, {'lpfilter', 'lpfreq', 'lpfilttype'});
                 end
                     
+                % Set gamma bandpass filtering parameters and preprocess.
                 cfg.bpfilter      = 'yes';
                 cfg.bpfreq        = gammabands(iband,:);
                 cfg.bpfilttype    = 'firws';
@@ -216,29 +236,30 @@ for isubj = 1:length(info.subj)
         end
     end
 
-    % Save broadband data, if necessary.
+    pathname = [info.path.processed.hd subject '/' subject '_' experiment]; % common file name start
+    endname = ['_' num2str(timewin(1)) '_' num2str(timewin(2)) '.mat'];
+    
+    % Save broadband data, if necessary. 
     if dobroadband
-        save([info.path.processed.hd '-1000_2750/' subject '_' experiment '_broadband.mat'], 'broadband', '-v7.3')
+        save([pathname '_broadband' endname], 'broadband', '-v7.3')
     end
 
     % Save theta phase data, if necessary.
     if dothetaphase
-        save([info.path.processed.hd '-1000_2750/' subject '_' experiment '_thetaphase.mat'], 'thetaphase', '-v7.3')
+        save([pathname '_thetaphase_' thetalabel endname], 'thetaphase', '-v7.3')
     end
 
     % Save theta amplitude data, if necessary.
     if dothetaamp
-        save([info.path.processed.hd '-1000_2750/' subject '_' experiment '_thetaamp.mat'], 'thetaamp', '-v7.3')
+        save([pathname '_thetaamp_' thetalabel endname], 'thetaamp', '-v7.3')
     end
     
     % Save gamma amplitude data, if necessary.
     if dogammaamp     
         if ~domultigamma
             gammaamp = gammaamp{1}; % just save a struct if there's only one
-            save([info.path.processed.hd '-1000_2750/' subject '_' experiment '_gammaamp_single.mat'], 'gammaamp', '-v7.3')
-        else
-            save([info.path.processed.hd '-1000_2750/' subject '_' experiment '_gammaamp_multi.mat'], 'gammaamp', '-v7.3')
         end
+        save([pathname '_gammaamp_' gammalabel endname], 'gammaamp', '-v7.3')
     end
 end
 disp('Done.')
