@@ -27,7 +27,12 @@ load([info.path.processed.hd 'FR1_thetaamp.mat'], 'thetaamp')
 posttheta = thetaamp;
 
 % Load HFA amplitudes.
-load([info.path.processed.hd 'FR1_hfa.mat'], 'hfabaseline', 'hfaencoding');
+load([info.path.processed.hd 'FR1_hfa_-800_0.mat'], 'hfa');
+hfabaseline = hfa;
+
+load([info.path.processed.hd 'FR1_hfa_0_800.mat'], 'hfa');
+hfaencoding = hfa;
+clear hfa
 
 % Load within-channel tsPAC.
 load([info.path.processed.hd 'FR1_tspac_within_0_1600.mat']);
