@@ -62,7 +62,7 @@ class KahData:
     for path in paths:
         exec(path + ' = pd.read_csv(paths[path])')
 
-    def __init__(self, subject='all', exclude_region=None, enforce_theta=False, enforce_phase=False, theta_threshtype='bump', theta_thresh=None):
+    def __init__(self, subject='all', exclude_region=None, enforce_theta=False, enforce_phase=False, theta_threshtype='bump', theta_thresh=None, exclude_theta=False):
         """ Create a KahData() object. """
 
         # Set input parameters. 
@@ -72,6 +72,10 @@ class KahData:
         self.enforce_phase = enforce_phase
         self.theta_threshtype = theta_threshtype
         self.theta_thresh = theta_thresh
+        self.exclude_theta = exclude_theta
+
+        if self.enforce_theta and self.exclude_theta:
+            raise ValueError('Theta power should not be enforced and simultaneous used to exclude channels.')
 
         # Extract data of interest based on subject, channel exclusion, and features of interest.
         self._set_data()
@@ -128,17 +132,22 @@ class KahData:
             for theta, channel in zip(THETAS[idata], CHANNELS[idata]):
                 getattr(self, dataset)[theta] = [1 if chan in list(thetachan) else 0 for chan in getattr(self, dataset)[channel]]
 
-        # Exclude channels without prominent theta, if necessary.
-        if self.enforce_theta:
-            # Single channels must have theta.
+        # Exclude channels with or without prominent theta, if necessary.
+        if self.enforce_theta or self.exclude_theta:
+            if self.exclude_theta:
+                targets = [0, 0]
+            elif self.enforce_theta:
+                targets = [1, 2]
+
+            # Single channels.
             for single in SINGLECHAN:
                 datacurr = getattr(self, single)
-                setattr(self, single, datacurr[datacurr['thetachan'] == 1])
+                setattr(self, single, datacurr[datacurr['thetachan'] == targets[0]])
 
-            # Channel pairs must have theta in both channels.
+            # Channel pairs.
             for multi in MULTICHAN:
                 datacurr = getattr(self, multi)
-                setattr(self, multi, datacurr[datacurr['thetachanA'] + datacurr['thetachanB'] == 2])
+                setattr(self, multi, datacurr[datacurr['thetachanA'] + datacurr['thetachanB'] == targets[1]])
 
     def _set_phasepair(self):
         """ Mark phase-encoding pairs and remove non-encoding pairs, if necessary. """
