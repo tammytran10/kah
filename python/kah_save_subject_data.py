@@ -4,7 +4,7 @@ from kah_data import SUBJECTS, KahData
 import pickle
 
 # All channels, only theta channels/pairs, only theta and phase encoding.
-SUBJECT_TYPES = ['all', 'theta', 'theta_phase']
+SUBJECT_TYPES = ['all', 'theta', 'theta_phase', 'notheta']
 
 # Files to save to.
 SUBJECT_FILES = {}
@@ -25,6 +25,9 @@ if __name__ == "__main__":
 
         # For excluding channels without theta.
         subject_data['theta'].append(KahData(subject=SUBJECTS[isubj], exclude_region='N', enforce_theta=True, theta_threshtype='bump'))
+
+        # For excluding channels with theta.
+        subject_data['notheta'].append(KahData(subject=SUBJECTS[isubj], exclude_region='N', exclude_theta=True, theta_threshtype='bump'))
 
         # For excluding channels without theta and channel pairs without phase encoding.
         subject_data['theta_phase'].append(KahData(subject=SUBJECTS[isubj], exclude_region='N', enforce_theta=True, enforce_phase=True, theta_threshtype='bump'))
