@@ -39,7 +39,7 @@ for isubj = 1:length(info.subj)
     shifttrials{isubj} = shifts;
 end
 
-save([info.path.processed.hd experiment '_trialshifts_default_pac_within_ts.mat'], 'shifttrials')
+save([info.path.processed.hd experiment '_pac_within_ts_trialshifts_default.mat'], 'shifttrials')
 disp('Done.')
 
 %% FOR BETWEEN-CHANNEL TSPAC
@@ -82,6 +82,6 @@ for isubj = 1:length(info.subj)
             end
         end
     end
-    save([info.path.processed.hd subject '_' experiment '_trialshifts_default_pac_between_ts.mat'], 'shifttrials')
+    save([info.path.processed.hd subject '/pac/ts/' subject '_' experiment '_pac_between_ts_trialshifts_default.mat'], 'shifttrials')
 end
 disp('Done.')
