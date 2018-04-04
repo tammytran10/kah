@@ -3,7 +3,7 @@
 import numpy as np
 import pickle
 from kah_save_subject_data import SUBJECT_FILES
-from kah_classifier import KahClassifier
+from kah_classifier import KahClassifier, PREDICTORS_ALL
 from kah_data import SUBJECTS
 from scipy import stats
 
@@ -31,14 +31,14 @@ def get_final_coefs(subj_type, predictors, filename):
     C_mode = stats.mode(C_best).mode
 
     # Refit models using the common C and save the coefficients.
-    coefs = np.empty([len(subjects), len(predictors) + 1])
+    coefs = np.empty([len(subjects), len(predictors)])
 
     for isubj in range(len(subjects)):
         clf.classify(subjects[isubj], 'logistic', hyperparameters={'C':[C_mode]})
         coefs[isubj, :] = clf.final_estimator_.coef_
 
     # Save to disk.
-    kah = {'C_best':C_best, 'C_mode':C_mode, 'coefs':coefs}
+    kah = {'C_best':C_best, 'C_mode':C_mode, 'coefs':coefs, 'subject_id':subj_type[1], 'predictors':predictors}
     with open(filename, 'wb') as file:
         pickle.dump(kah, file) 
 
@@ -51,7 +51,7 @@ if __name__ == "__main__":
 
     # Tuple format is (data type, subjects to include)
     subj_type = ('theta', good_auc)
-    predictors = 'all'
-    filename = 'kah_theta_classifiableonly_predictors_all_coefs.pickle'
+    predictors = [('posthfa', 'T'), ('posthfa', 'F'), ('normtspacmax', 'TF')]
+    filename = 'kah_theta_classifiableonly_predictors_top3_coefs.pickle'
 
     get_final_coefs(subj_type, predictors, filename)
