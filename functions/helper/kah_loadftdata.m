@@ -3,19 +3,13 @@ function [data, trialinfo, chans, times, temporal, frontal] = kah_loadftdata(inf
 % Usage:
 %   [data, trialinfo, chans, times, temporal, frontal] = kah_loadftdata(info, 'R1020J', 'thetaphase', [-800, 1600], 1);
 
-switch datatype
-    case 'thetaphase'
-        filecurr = [info.path.processed.hd '-1000_2750/' subject '_FR1_thetaphase.mat'];
-    case 'thetaamp'
-        filecurr = [info.path.processed.hd '-1000_2750/' subject '_FR1_thetaamp.mat'];
-    case 'broadband'
-        filecurr = [info.path.processed.hd '-1000_2750/' subject '_FR1_broadband.mat'];
-    case 'gammaamp'
-        filecurr = [info.path.processed.hd '-1000_2750/' subject '_FR1_gammaamp.mat'];
-    case 'hfa'
-        filecurr = [info.path.processed.hd subject '_FR1_hfa_-800_1600.mat'];
-    otherwise
-        error('Data type not available.')
+% Find subject file to load.
+pathname = [info.path.processed.hd subject '/data/' subject '_FR1_'];
+
+if datatype == 'hfa'
+    filecurr = [pathname 'hfa_-800_1600.mat'];
+else
+    filecurr = [pathname datatype '_-1000_2750.mat'];
 end
 
 % Load subject data.
@@ -23,8 +17,8 @@ input = load(filecurr);
 varname = fieldnames(input);
 data = input.(varname{1});
 
-if ~strcmpi(datatype, 'gammaamp')
-    data = {data}; % so cellfun can be used for all datatypes, keeps code more condense
+if ~strcmpi(datatype, 'gammaamp_multi')
+    data = {data}; % so cellfun can be used for all datatypes, keeps code more condensed
 end
 
 % Re-epoch.
@@ -42,7 +36,7 @@ if reformat
     data = cellfun(@kah_reformat, data, 'UniformOutput', false);
 end
 
-if ~strcmpi(datatype, 'gammaamp')
+if ~strcmpi(datatype, 'gammaamp_multi')
     data = data{1}; % if only one struct, remove from cell array
 end
 
