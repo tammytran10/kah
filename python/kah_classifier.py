@@ -13,6 +13,8 @@ from sklearn import utils
 PREDICTORS_ALL =  [
                     ('preslope', 'T'), 
                     ('preslope', 'F'), 
+                    ('posttheta', 'T'),
+                    ('posttheta', 'F'),
                     ('posthfa', 'T'), 
                     ('posthfa', 'F'),
                     ('normtspac', 'T'), 
@@ -99,11 +101,14 @@ class KahClassifier:
         # Scale features using the mean and variance of the training data.
         Xtrain, Xtest, _ = self._standardscale_features(Xtrain, Xtest)
 
-        # Create classifier object.
+        # Choose classification method.       
         if method == 'logistic': # for logistic regression.
-            clf = self._logistic_regression()
+            classify_method = self._logistic_regression
         else:
             raise ValueError('Classification method not supported.')
+
+        # Create classifier object.
+        clf = classify_method()
 
         # Fit a model on all of the training data. In the case of multiple C, perform k-fold cross-validation on the training set.
         clf.fit(Xtrain, ytrain)
@@ -138,12 +143,18 @@ class KahClassifier:
 
                 # Calculate AUC of ROC curve for the resampled test set.
                 self.roc_auc_resample_[iresample] = roc_auc_score(ytest_resample, prob_resample[:, 1], average='weighted')
-            
+
+        # Save estimator used for performance assessment.
+        self.roc_estimator_ = clf
+
+        # Re-initialize estimator to find optimal hyperparameters for full data. 
+        clf = classify_method()
+
         # Fit a model on all data, both training and test, re-scaled using all data. 
         clf.fit(StandardScaler().fit(self.predvals).transform(self.predvals), self.labels)
 
-        # Save model.
-        self.estimator_ = clf
+        # Save model for all data.
+        self.final_estimator_ = clf
 
     def _standardscale_features(self, Xtrain, Xtest):
         """ Scale features to have zero mean and unit variance. """
