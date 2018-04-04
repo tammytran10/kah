@@ -30,12 +30,12 @@ for isubj = 1:length(info.subj)
     for ipair = 1:nchanpair
         if mod(ipair, 50) == 0, disp([num2str(ipair) '/' num2str(nchanpair)]), end
         % Load individual channel pair.
-        input = load([info.path.processed.cluster 'tspac/' subject '_FR1_pac_between_ts_' num2str(timewin(1)) '_' num2str(timewin(2)) '_pair_' num2str(ipair) '_resamp_' thetalabel '.mat']);
+        input = load([info.path.processed.cluster 'tspac/' thetalabel '/' subject '_FR1_pac_between_ts_' num2str(timewin(1)) '_' num2str(timewin(2)) '_pair_' num2str(ipair) '_resamp.mat']);
         
         % Save individual channel pairs.
         pacbetween(ipair, :, :, :) = input.pacbetween;
     end
     
     % Save.
-    save([info.path.processed.hd subject '/pac/ts/' subject '_' experiment '_pac_between_ts_' num2str(timewin(1)) '_' num2str(timewin(2)) '_resamp_ ' thetalabel '.mat'], 'pacbetween', 'chanpairs', 'trialinfo', 'chans')
+    save([info.path.processed.hd subject '/pac/ts/' thetalabel '/' subject '_' experiment '_pac_between_ts_' num2str(timewin(1)) '_' num2str(timewin(2)) '_resamp.mat'], 'pacbetween', 'chanpairs', 'trialinfo', 'chans')
 end

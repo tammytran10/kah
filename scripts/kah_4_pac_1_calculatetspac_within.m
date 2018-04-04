@@ -24,7 +24,7 @@ for isubj = 1:length(info.subj)
     timewin = [0, 1600]; % ms
     
     % Skip subject if all permutations have already been run.
-    filecurr = [info.path.processed.hd subject '/pac/ts/' subject '_' experiment '_pac_within_ts_' num2str(timewin(1)) '_' num2str(timewin(2)) '_resamp.mat'];
+    filecurr = [info.path.processed.hd subject '/pac/ts/' thetalabel '/' subject '_' experiment '_pac_within_ts_' num2str(timewin(1)) '_' num2str(timewin(2)) '_resamp.mat'];
     if exist(filecurr, 'file')        
         disp(['Skipping ' subject])
         continue

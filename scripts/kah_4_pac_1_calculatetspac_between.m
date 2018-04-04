@@ -53,7 +53,7 @@ for isubj = 1:length(info.subj)
     % Specify inputs to kah_calculatepac per channel pair.
     for ipair = 1:nchanpair
         % Skip job if this channel pair has already been run.
-        newfile = [clusterpath 'tspac/' subject '_FR1_pac_between_ts_0_1600_pair_' num2str(pairnum) '_resamp_ ' thetalabel '.mat'];
+        newfile = [clusterpath 'tspac/' thetalabel '/' subject '_FR1_pac_between_ts_0_1600_pair_' num2str(pairnum) '_resamp.mat'];
         if exist(newfile, 'file')
             continue
         end

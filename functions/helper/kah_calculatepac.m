@@ -5,7 +5,7 @@ times = theta.times;
 thetaphase = theta.data([chanA, chanB], :, :);
 
 % Load HFA amplitude data for only channels of interest.
-hfa = matfile([clusterpath 'hfa/' subject '_FR1_hfaamp_-800_1600.mat']);
+hfa = matfile([clusterpath 'hfa/' subject '_FR1_hfa_-800_1600.mat']);
 hfaamp = hfa.data([chanA, chanB], :, :);
 hfaamp = flip(hfaamp, 1); % so that theta and HFA from opposite channels are matched up
 [ndirection, ~, ntrial] = size(hfaamp);
@@ -32,7 +32,7 @@ for itrial = 1:ntrial
     end
 end
 
-outputfile = [clusterpath 'tspac/' subject '_FR1_pac_between_ts_0_1600_pair_' num2str(pairnum) '_resamp_ ' thetalabel '.mat'];
+outputfile = [clusterpath 'tspac/' thetalabel '/' subject '_FR1_pac_between_ts_0_1600_pair_' num2str(pairnum) '_resamp.mat'];
 save(outputfile, 'pacbetween');
 end
 
