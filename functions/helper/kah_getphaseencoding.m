@@ -1,4 +1,4 @@
-function phaseencoding = kah_getphaseencoding(info, subject, testtype, lengththreshtype, lengththresh, statthreshtype, timeoi, episodetype)
+function phaseencoding = kah_getphaseencoding(info, subject, testtype, lengththreshtype, lengththresh, statthreshtype, timeoi, episodetype, thetalabel)
 
 % Usage: 
 %   phaseencoding = kah_getphaseencoding(info, subject, testtype, lengththreshtype, lengththresh, statthreshtype, timeoi, episodetype);
@@ -10,7 +10,7 @@ load([info.path.processed.hd experiment '_thetabands_-800_1600.mat'], 'bands')
 thetacfs = cellfun(@(x) nanmean(mean(x, 2)), bands);
 
 % Load phase-encoding data to detect relevant channel pairs.
-load([info.path.processed.hd subject '_' experiment '_phaseencode_' testtype '_-800_1600_nosamp.mat'], 'statA', 'statB', 'statbetween', 'pvalA', 'pvalB', 'pvalbetween', 'chanpairs', 'times', 'trialinfo', 'chans')
+load([info.path.processed.hd subject '/phase/' thetalabel '/' subject '_' experiment '_phase_' testtype '_-800_1600_nosamp.mat'], 'statA', 'statB', 'statbetween', 'pvalA', 'pvalB', 'pvalbetween', 'chanpairs', 'times', 'trialinfo', 'chans')
 
 % Set episode time length.
 switch lengththreshtype
