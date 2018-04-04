@@ -69,6 +69,20 @@ for isubj = 1:length(info.subj)
         end
     end
     
-    save([info.path.processed.hd subject '_FR1_slope_' num2str(timewin(1)) '_' num2str(timewin(2)) '_' pad '.mat'], 'timewin', 'freqoi', 'trialinfo', 'times', 'freq', 'psds', 'slopes', 'chans', 'temporal', 'frontal')
+    % Save individual subject.
+    save([info.path.processed.hd subject '/slope/' subject '_FR1_slope_' num2str(timewin(1)) '_' num2str(timewin(2)) '_' pad '.mat'], 'timewin', 'freqoi', 'trialinfo', 'times', 'freq', 'psds', 'slopes', 'chans', 'temporal', 'frontal')
 end
+
+% Save subjects together.
+clearvars('-except', 'info', 'timewin')
+
+slopes = cell(length(info.subj), 1);
+
+for isubj = 1:length(info.subj)
+    subject = info.subj{isubj};
+    input = load([info.path.processed.hd subject '/slope/' subject '_FR1_slope_' num2str(timewin(1)) '_' num2str(timewin(2)) '.mat'], 'temporal', 'frontal', 'slopes', 'trialinfo');
+    slopes{isubj} = input.slopes;
+end
+
+save([info.path.processed.hd 'FR1_slopes_' num2str(timewin(1)) '_' num2str(timewin(2)) '.mat'], 'slopes')
 disp('Done')
