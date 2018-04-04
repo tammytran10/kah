@@ -29,6 +29,6 @@ for isubj = 1:length(info.subj)
     hfa = hfa ./ length(gammaamp);
 
     % Save HFA amplitude.
-    save([info.path.processed.hd subject '/' subject '_' experiment '_hfa_' num2str(timewin(1)) '_' num2str(timewin(2)) '.mat'], 'hfa', 'timewin', 'trialinfo', 'times', 'chans', 'temporal', 'frontal', '-v7.3')
+    save([info.path.processed.hd subject '/data/' subject '_' experiment '_hfa_' num2str(timewin(1)) '_' num2str(timewin(2)) '.mat'], 'hfa', 'timewin', 'trialinfo', 'times', 'chans', 'temporal', 'frontal', '-v7.3')
 end
 disp('Done.')
