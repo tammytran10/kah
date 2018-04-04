@@ -11,20 +11,15 @@ preslope = slopes;
 
 load([info.path.processed.hd 'FR1_slopes_300_1300.mat'], 'slopes');
 postslope = slopes;
-
 clear slopes
 
-% Load thetas amplitudes.
-load([info.path.processed.hd 'FR1_thetabands_-800_0_trials_padded.mat'], 'amplitudes');
-pretheta = amplitudes;
+% Load thetas analytic amplitudes.
+load([info.path.processed.hd 'FR1_thetaamp_cf_-800_0.mat'], 'thetaamp')
+pretheta = thetaamp;
 
-% load([info.path.processed.hd 'FR1_thetabands_0_1600_trials.mat'], 'amplitudes');
-% posttheta = amplitudes;
-
-clear amplitudes
-
-load([info.path.processed.hd 'FR1_thetaamp.mat'], 'thetaamp')
+load([info.path.processed.hd 'FR1_thetaamp_cf_0_800.mat'], 'thetaamp')
 posttheta = thetaamp;
+clear thetaamp
 
 % Load HFA amplitudes.
 load([info.path.processed.hd 'FR1_hfa_-800_0.mat'], 'hfa');
@@ -35,7 +30,7 @@ hfaencoding = hfa;
 clear hfa
 
 % Load within-channel tsPAC.
-load([info.path.processed.hd 'FR1_tspac_within_0_1600.mat']);
+load([info.path.processed.hd 'FR1_pac_within_ts_0_1600_cf.mat']);
 
 % Load channel and trial information.
 load([info.path.processed.hd 'FR1_chantrialinfo.mat'], 'chanregions', 'chans', 'encoding')
@@ -80,26 +75,17 @@ util_cell2csv([info.path.csv 'kah_singletrial_singlechannel.csv'], csv, header)
 %% SINGLE-CHANNEL
 clearvars('-except', 'info')
 
-% Load thetas p-values.
-load([info.path.processed.hd 'FR1_thetabands_-800_0_trials_padded.mat'], 'thetapvals');
-prethetapvals = thetapvals;
-
-load([info.path.processed.hd 'FR1_thetabands_0_1600_trials.mat'], 'thetapvals');
-postthetapvals = thetapvals;
-
-clear thetapvals
-
 % Load HFA p-values.
-load([info.path.processed.hd 'FR1_hfa.mat'], 'hfapval');
+load([info.path.processed.hd 'FR1_hfa_0_800.mat'], 'hfapval');
 
-% Load which theta center frequencies.
+% Load theta center frequencies.
 load([info.path.processed.hd 'FR1_thetabands_-800_1600_chans.mat'])
 
 % Load channel and trial information.
 load([info.path.processed.hd 'FR1_chantrialinfo.mat'], 'chanregions', 'chans')
 
 % Set names of metrics.
-header = {'subject', 'age', 'channel', 'region', 'pvalpretheta', 'pvalposttheta', 'pvalhfa', 'thetabump'};
+header = {'subject', 'age', 'channel', 'region', 'pvalhfa', 'thetabump'};
 
 % Build CSV.
 csv = [];
@@ -114,7 +100,7 @@ for isubj = 1:length(info.subj)
     for ipair = 1:nchan
         % Build current line.
         linecurr = {info.subj{isubj}, info.age(isubj), chans{isubj}{ipair}, chanregions{isubj}{ipair}, ...
-            prethetapvals{isubj}(ipair), postthetapvals{isubj}(ipair), hfapval{isubj}(ipair), ...
+            hfapval{isubj}(ipair), ...
             ~isnan(bands{isubj}(ipair, 1))};
         linecurr = cellfun(@string, linecurr, 'UniformOutput', false); % needs to be strings
         
