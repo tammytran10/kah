@@ -18,10 +18,13 @@ clear slopes
 load([info.path.processed.hd 'FR1_thetabands_-800_0_trials_padded.mat'], 'amplitudes');
 pretheta = amplitudes;
 
-load([info.path.processed.hd 'FR1_thetabands_0_1600_trials.mat'], 'amplitudes');
-posttheta = amplitudes;
+% load([info.path.processed.hd 'FR1_thetabands_0_1600_trials.mat'], 'amplitudes');
+% posttheta = amplitudes;
 
 clear amplitudes
+
+load([info.path.processed.hd 'FR1_thetaamp.mat'], 'thetaamp')
+posttheta = thetaamp;
 
 % Load HFA amplitudes.
 load([info.path.processed.hd 'FR1_hfa.mat'], 'hfabaseline', 'hfaencoding');
