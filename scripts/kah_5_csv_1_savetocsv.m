@@ -123,7 +123,7 @@ clearvars('-except', 'info')
 load([info.path.processed.hd 'FR1_pac_between_ts_0_1600_cf.mat'], 'tspac');
 
 % Load phase-encoding.
-load([info.path.processed.hd 'FR1_phaseencoding_0_1600_cf.mat'], 'phaseencoding');
+load([info.path.processed.hd 'FR1_phase_corrcl_0_1600_cf.mat'], 'phaseencoding');
 
 % Load channel and trial information.
 load([info.path.processed.hd 'FR1_chantrialinfo.mat'], 'pairs', 'pairregions')
