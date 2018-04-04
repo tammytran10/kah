@@ -6,10 +6,8 @@ info = kah_info;
 %%
 clearvars('-except', 'info')
 
-testtype = 'cmtest'; % options corrcl, wwtest, and cmtest
-
-%%
-% if isempty(gcp), parpool('local', 2); end % open up second pool
+testtype = 'corrcl'; % options corrcl, wwtest, and cmtest
+thetalabel = 'cf';
 
 % Set experiment.
 experiment = 'FR1';
@@ -21,7 +19,7 @@ for isubj = 1:length(info.subj)
     disp([num2str(isubj) ' ' subject])
 
     % Load subject theta phase data.
-    [dat, trialinfo, chans, times, temporal, frontal] = kah_loadftdata(info, subject, 'thetaphase', [-800, 1600], 1);
+    [dat, trialinfo, chans, times, temporal, frontal] = kah_loadftdata(info, subject, ['thetaphase_' thetalabel], [-800, 1600], 1);
     
     encoding = logical(trialinfo(:, 3));
     nchan = length(chans);
@@ -49,6 +47,6 @@ for isubj = 1:length(info.subj)
     end
 
     % Save.
-    save([info.path.processed.hd subject '_' experiment '_phaseencode_' testtype '_' num2str(timewin(1)) '_' num2str(timewin(2)) '.mat'], 'statA', 'statB', 'statbetween', 'pvalA', 'pvalB', 'pvalbetween', 'chanpairs', 'times', 'trialinfo', 'chans')
+    save([info.path.processed.hd subject '/phase/cf/' subject '_' experiment '_phaseencode_' testtype '_' num2str(timewin(1)) '_' num2str(timewin(2)) '_nosamp.mat'], 'statA', 'statB', 'statbetween', 'pvalA', 'pvalB', 'pvalbetween', 'chanpairs', 'times', 'trialinfo', 'chans')
 end
 disp('Done.')
