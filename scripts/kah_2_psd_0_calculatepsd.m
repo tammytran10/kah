@@ -39,6 +39,7 @@ for isubj = 1:length(info.subj)
     else
         padlabel = '_padded';
     end
-    save([info.path.processed.hd subject '_FR1_psd_' num2str(timewin(1)) '_' num2str(timewin(2)) padlabel '.mat'], 'timewin', 'trialinfo', 'times', 'dat', 'freq', 'psds', 'chans', 'temporal', 'frontal', '-v7')
+    
+    save([info.path.processed.hd subject '/psd/' subject '_FR1_psd_' num2str(timewin(1)) '_' num2str(timewin(2)) padlabel '.mat'], 'timewin', 'trialinfo', 'times', 'dat', 'freq', 'psds', 'chans', 'temporal', 'frontal', '-v7')
 end
 disp('Done')
