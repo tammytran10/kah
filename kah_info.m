@@ -132,6 +132,9 @@ for isubj = 1:numel(info.subj)
         % Get channel type (grid, strip, depth).
         info.(subject).allchan.type{ichan} = chancurr.type;
         
+        % Get left/right hemisphere.
+        info.(subject).allchan.lefthemisphere{ichan} = strcmpi('l', info.(subject).allchan.label{ichan}(1));
+        
         % Get atlas-specific information.
         atlases = {'avg', 'avg_0x2E_dural', 'ind', 'ind_0x2E_dural', 'mni', 'tal', 'vox'};
         for iatlas = 1:length(atlases)
@@ -187,10 +190,12 @@ for isubj = 1:numel(info.subj)
         % Set terms to search for in region labels.
         frontalterms = {'frontal', 'opercularis', 'triangularis', 'precentral', 'rectal', 'rectus', 'orbital'};
         temporalterms = {'temporal', 'fusiform', 'hippocamp', 'bankssts', 'entorhinal'};
+        hippterms = {'hippocamp', 'entorhinal'};
         
         % Determine lobe location based on individual labels only.
         frontal = contains(indlabel, frontalterms);
         temporal = contains(indlabel, temporalterms);
+        hippocampal = contains(indlabel, hippterms);
         
         if frontal
             info.(subject).allchan.lobe{ichan} = 'F';
@@ -198,6 +203,12 @@ for isubj = 1:numel(info.subj)
             info.(subject).allchan.lobe{ichan} = 'T';
         else
             info.(subject).allchan.lobe{ichan} = 'NA';
+        end
+        
+        if hippocampal
+            info.(subject).allchan.hipp{ichan} = 1;
+        else
+            info.(subject).allchan.hipp{ichan} = 0;
         end
         
         % Determine lobe location based on majority vote across individual, MNI, and TAL.
@@ -217,8 +228,10 @@ for isubj = 1:numel(info.subj)
     
     % Re-format to column vectors.
     info.(subject).allchan.type = info.(subject).allchan.type(:);
+    info.(subject).allchan.left = info.(subject).allchan.left(:);
     info.(subject).allchan.lobe = info.(subject).allchan.lobe(:);
     info.(subject).allchan.altlobe = info.(subject).allchan.altlobe(:);
+    info.(subject).allchan.hipp = info.(subject).allchan.hipp(:);
     for iatlas = 1:length(atlases)
         info.(subject).allchan.(atlases{iatlas}).region = info.(subject).allchan.(atlases{iatlas}).region(:);
     end
