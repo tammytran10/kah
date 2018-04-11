@@ -110,9 +110,34 @@ for isubj = 1:numel(info.subj)
     info.(subject).lsurffile = [info.path.surf subject '/surf/lh.pial'];
     info.(subject).rsurffile = [info.path.surf subject '/surf/rh.pial'];
 
+    % Get path for file with notes for each electrode.
+    info.(subject).electrodenotes = [info.path.kah 'Release_Metadata_20160930/electrode_categories/electrode_categories_' subject '.txt'];
+    
+    % Open file.
+    fileID = fopen(info.(subject).electrodenotes);
+    electrodenotes = textscan(fileID, '%s');
+    electrodenotes = upper(electrodenotes{1});
+    
+    % Find bad channels (after Seizure Onset Zone heading and before Interictal)
+    info.(subject).badchan.kahana = {};
+    onset = find(contains(electrodenotes, 'ONSET'), 1);
+    interictal = find(strcmpi('interictal', electrodenotes), 1);
+    
+    if ~isempty(onset) && ~isempty(interictal)
+        epilepticchans = electrodenotes(onset + 1:interictal - 1);
+        epilepticchans(contains(epilepticchans, 'ZONE')) = [];
+        epilepticchans(contains(epilepticchans, 'UNREPORTED')) = [];
+        info.(subject).badchan.kahana = epilepticchans;
+    end
+    
+    % Hard-code some subjects with wonky files.
+    info.R1118N.badchan.kahana = {'LID2', 'LID3', 'LID4', 'PPST3', 'PPST4', 'TT1', 'AST1', 'MST1', 'PST1', 'G12'};
+    info.R1169P.badchan.kahana = {'RPF*', 'RH*', 'LAF*'};
+    info.R1157C.badchan.kahana = {'A1', 'A10', 'A11', 'A12', 'A13', 'A2', 'A3', 'A4', 'A5', 'A6', 'A7', 'A8', 'A9', 'IP*'};
+
     % Get experiment-data path for current subject.
     subjpathcurr = [info.path.exp subject '/'];
-        
+            
     % Get subject age.
     info.(subject).age = info.age(isubj);
     
@@ -131,10 +156,7 @@ for isubj = 1:numel(info.subj)
         
         % Get channel type (grid, strip, depth).
         info.(subject).allchan.type{ichan} = chancurr.type;
-        
-        % Get left/right hemisphere.
-        info.(subject).allchan.lefthemisphere{ichan} = strcmpi('l', info.(subject).allchan.label{ichan}(1));
-        
+         
         % Get atlas-specific information.
         atlases = {'avg', 'avg_0x2E_dural', 'ind', 'ind_0x2E_dural', 'mni', 'tal', 'vox'};
         for iatlas = 1:length(atlases)
@@ -163,6 +185,9 @@ for isubj = 1:numel(info.subj)
             info.(subject).allchan.(atlases{iatlas}).xyz(ichan,:) = [atlascurr.x, atlascurr.y, atlascurr.z];
         end
         
+        % Get left/right hemisphere.
+        info.(subject).allchan.lefthemisphere(ichan) = info.(subject).allchan.ind.xyz(ichan, 1) < 0; % strcmpi('l', info.(subject).allchan.label{ichan}(1));
+        
         % Get top anatomical label from MNI atlas.
         try
             mnilabel = lower(atlas_lookup(mniatlas, info.(subject).allchan.mni.xyz(ichan,:), 'inputcoord', 'mni', 'queryrange', 3));
@@ -187,15 +212,13 @@ for isubj = 1:numel(info.subj)
         % Get individual anatomical annotations from Kahana group.
         indlabel = lower(info.(subject).allchan.ind.region{ichan});
         
-        % Set terms to search for in region labels.
+        % Set terms to search for in region labels to map to lobes.
         frontalterms = {'frontal', 'opercularis', 'triangularis', 'precentral', 'rectal', 'rectus', 'orbital'};
         temporalterms = {'temporal', 'fusiform', 'hippocamp', 'bankssts', 'entorhinal'};
-        hippterms = {'hippocamp', 'entorhinal'};
         
         % Determine lobe location based on individual labels only.
         frontal = contains(indlabel, frontalterms);
         temporal = contains(indlabel, temporalterms);
-        hippocampal = contains(indlabel, hippterms);
         
         if frontal
             info.(subject).allchan.lobe{ichan} = 'F';
@@ -205,12 +228,45 @@ for isubj = 1:numel(info.subj)
             info.(subject).allchan.lobe{ichan} = 'NA';
         end
         
-        if hippocampal
-            info.(subject).allchan.hipp{ichan} = 1;
-        else
-            info.(subject).allchan.hipp{ichan} = 0;
-        end
+        % Set terms to search for in region labels to map to sub-lobes.
+        sublobe_regions = struct;
+        sublobe_regions.mtl = {'hippocamp', 'entorhin', 'uncus'};
+        sublobe_regions.ltl = {'temporal', 'heschl', 'bankssts', 'brodmann area 20', 'brodmann area 21'};
+        sublobe_regions.mpfc = {'orbito', 'rectal', 'rectus', 'olfactory', 'brodmann area 25'};
+        sublobe_regions.lpfc = {'frontal', 'opercularis', 'triangularis', 'brodmann area 47', 'orbitalis'};
+        sublobe_regions.occipital = {'occipit', 'lingual', 'cuneus', 'calcarine', 'fusiform'};
+        sublobe_regions.parietal = {'pariet', 'postcentral', 'supramarginal', 'angular'};
+        sublobe_regions.motor = {'precentral', 'paracentral', 'motor', 'rolandic'};
+        sublobe_regions.limbic = {'cingulate', 'cingulum', 'subcallosal gyrus', 'amygdala'};
+        sublobe_regions.insula = {'insula', 'claustrum'};
+        sublobe_regions.striatum = {'caudate', 'putamen', 'lentiform', 'pallidum'};
+        sublobe_regions.thalamus = {'pulvinar', 'thalamus'};
+        sublobe_regions.cerebellum = {'culmen', 'declive', 'cerebelum', 'vermis'};
+
+        % Names of possible sublobes.
+        sublobes = fieldnames(sublobe_regions);
         
+        % Find sublobe for current channel by going through each list of potential regions.
+        info.(subject).allchan.sublobe{ichan} = 'NA';
+        for isublobe = 1:length(sublobes)
+            subcurr = sublobes{isublobe};
+            
+            % Only proceed if a label has not already been found. 
+            if strcmpi(info.(subject).allchan.sublobe{ichan}, 'NA')
+                % Use individual label if possible, MNI otherwise.
+                if strcmpi(indlabel, 'NA')
+                    atlas_use = mnilabel;
+                else
+                    atlas_use = indlabel;
+                end
+                
+                % Compare current region to list of potential regions for this sublobe.
+                if contains(atlas_use, sublobe_regions.(subcurr))
+                    info.(subject).allchan.sublobe{ichan} = subcurr;
+                end
+            end
+        end
+ 
         % Determine lobe location based on majority vote across individual, MNI, and TAL.
         regions = {indlabel, mnilabel, tallabel};
         frontal = contains(regions, frontalterms);
@@ -228,10 +284,10 @@ for isubj = 1:numel(info.subj)
     
     % Re-format to column vectors.
     info.(subject).allchan.type = info.(subject).allchan.type(:);
-    info.(subject).allchan.left = info.(subject).allchan.left(:);
+    info.(subject).allchan.lefthemisphere = info.(subject).allchan.lefthemisphere(:);
     info.(subject).allchan.lobe = info.(subject).allchan.lobe(:);
     info.(subject).allchan.altlobe = info.(subject).allchan.altlobe(:);
-    info.(subject).allchan.hipp = info.(subject).allchan.hipp(:);
+    info.(subject).allchan.sublobe = info.(subject).allchan.sublobe(:);
     for iatlas = 1:length(atlases)
         info.(subject).allchan.(atlases{iatlas}).region = info.(subject).allchan.(atlases{iatlas}).region(:);
     end
@@ -1163,12 +1219,15 @@ info.R1175N.FR1.session(1).badsegment = [1375355,1375416;1410383,1411227;1417940
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 for isubj = 1:length(info.subj)
     subject = info.subj{isubj};
-    
-    if ismember('badchan', fieldnames(info.(subject)))
-        % Expand bad channel labels.
+
+    % Expand bad channel labels.
+    info.(subject).badchan.kahana = ft_channelselection(info.(subject).badchan.kahana, info.(subject).allchan.label);
+    try
         info.(subject).badchan.broken = ft_channelselection(info.(subject).badchan.broken, info.(subject).allchan.label);
         info.(subject).badchan.epileptic = ft_channelselection(info.(subject).badchan.epileptic, info.(subject).allchan.label);
         info.(subject).badchan.all = unique([info.(subject).badchan.broken; info.(subject).badchan.epileptic]);
+    catch
+        continue
     end
     
     if ismember('FR1', fieldnames(info.(subject))) && ismember('bsfilt', fieldnames(info.(subject).FR1))
