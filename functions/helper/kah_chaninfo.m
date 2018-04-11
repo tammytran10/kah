@@ -16,7 +16,7 @@ for ichan = 1:length(chanoi)
     if sum(chancurr) == 0
         continue
     end
-    chaninfo(ichan,:) = [info.(subject).allchan.label(chancurr), info.(subject).allchan.type(chancurr), info.(subject).allchan.lobe(chancurr), info.(subject).allchan.altlobe(chancurr), info.(subject).allchan.ind.region(chancurr), info.(subject).allchan.mni.region(chancurr), info.(subject).allchan.tal.region(chancurr)];
+    chaninfo(ichan,:) = [info.(subject).allchan.label(chancurr), info.(subject).allchan.type(chancurr), info.(subject).allchan.lobe(chancurr), info.(subject).allchan.sublobe(chancurr), info.(subject).allchan.ind.region(chancurr), info.(subject).allchan.mni.region(chancurr), info.(subject).allchan.tal.region(chancurr)];
 end
-chaninfo = cat(1, {'Label', 'Type', 'Lobe', 'Altlobe', 'Ind', 'MNI', 'TAL'}, chaninfo);
+chaninfo = cat(1, {'Label', 'Type', 'Lobe', 'Sublobe', 'Ind', 'MNI', 'TAL'}, chaninfo);
 end
