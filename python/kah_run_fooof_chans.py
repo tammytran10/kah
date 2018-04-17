@@ -19,7 +19,7 @@ if __name__ == "__main__":
         
         # Initialize FOOOF model.
         # Bandlimits [0.5, 4] for [-800, 1600]
-        foof_model = FOOOF(fit_knee = False, max_n_oscs = 3, bandwidth_limits=(0.5, 4))
+        foof_model = FOOOF(peak_width_limits=[0.5, 4], max_n_peaks=3, background_mode='fixed')
 
         # Define frequency range over which to model PSD. Use a low frequency range to optimize theta fits.
         # A more broadband range ([2, 50]) includes massive beta that swaps all estimates.
@@ -31,7 +31,7 @@ if __name__ == "__main__":
         # Fit model per channel using the mean PSD across trials. 
         for ichan in range(psds.shape[0]):
             foof_model.fit(freq, np.mean(psds[ichan, :, :], axis=1), freq_range)
-            output[ichan] = foof_model.oscillation_params_
+            output[ichan] = foof_model.peak_params_
         
         # Save to .mat file.
         sio.savemat('/Volumes/DATAHD/Active/KAH/' + subject + '/fooof/' + subject + '_FR1_fooof_-800_1600_chans.mat', {'fooof':output})
