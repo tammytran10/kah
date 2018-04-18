@@ -39,7 +39,7 @@ for isubj = 1:length(info.subj)
     disp([num2str(isubj) ' ' subject])
     
     % Get number of channels.
-    subjdata = matfile([clusterpath 'thetaphase/' subject '_FR1_thetaphase_' thetalabel '.mat']);
+    subjdata = matfile([clusterpath 'thetaphase/' subject '_FR1_thetaphase_' thetalabel '_-800_1600.mat']);
     nchan = length(subjdata.chans);
     
     % Get all unique pairs of channels.
@@ -53,7 +53,7 @@ for isubj = 1:length(info.subj)
     % Specify inputs to kah_calculatepac per channel pair.
     for ipair = 1:nchanpair
         % Skip job if this channel pair has already been run.
-        newfile = [clusterpath 'tspac/' thetalabel '/' subject '_FR1_pac_between_ts_0_1600_pair_' num2str(pairnum) '_resamp.mat'];
+        newfile = [clusterpath 'tspac/' thetalabel '/' subject '_FR1_pac_between_ts_0_1600_pair_' num2str(ipair) '_resamp.mat'];
         if exist(newfile, 'file')
             continue
         end
