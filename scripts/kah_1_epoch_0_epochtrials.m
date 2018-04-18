@@ -236,7 +236,7 @@ for isubj = 1:length(info.subj)
         end
     end
 
-    pathname = [info.path.processed.hd subject '/' subject '_' experiment]; % common file name start
+    pathname = [info.path.processed.hd subject '/data/' subject '_' experiment]; % common file name start
     endname = ['_' num2str(timewin(1)) '_' num2str(timewin(2)) '.mat'];
     
     % Save broadband data, if necessary. 
