@@ -1,8 +1,12 @@
 function kah_calculatepac(subject, chanA, chanB, pairnum, clusterpath, thetalabel)
 % Load theta phase data for only channels of interest. 
-theta = matfile([clusterpath 'thetaphase/' subject '_FR1_thetaphase_' thetalabel '_-1000_2750.mat']);
-times = theta.times;
+theta = matfile([clusterpath 'thetaphase/' subject '_FR1_thetaphase_' thetalabel '_-800_1600.mat']);
 thetaphase = theta.data([chanA, chanB], :, :);
+
+% Limit to post-stimulus period.
+times = theta.times;
+timewin = dsearchn(times(:), [0; 1.6]);
+thetaphase = thetaphase(:, timewin(1):timewin(2), :);
 
 % Load HFA amplitude data for only channels of interest.
 hfa = matfile([clusterpath 'hfa/' subject '_FR1_hfa_-800_1600.mat']);
@@ -11,8 +15,8 @@ hfaamp = flip(hfaamp, 1); % so that theta and HFA from opposite channels are mat
 [ndirection, ~, ntrial] = size(hfaamp);
 
 % Limit to post-stimulus period.
+times = hfa.times;
 timewin = dsearchn(times(:), [0; 1.6]);
-thetaphase = thetaphase(:, timewin(1):timewin(2), :);
 hfaamp = hfaamp(:, timewin(1):timewin(2), :);
 
 % Load samples to shift by. 
