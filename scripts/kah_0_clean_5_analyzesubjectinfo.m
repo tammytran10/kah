@@ -12,6 +12,10 @@ chaninfo_available = false(length(info.subj), 1);
 regions = {'mtl', 'ltl', 'lpfc'};
 epilepsy = false(length(info.subj), length(regions), 2);
 
+% Keep track of the number of surface channels.
+nsurface_regions = zeros(length(info.subj), length(regions), 2);
+nsurface_total = zeros(length(info.subj), 2);
+
 for isubj = 1:length(info.subj)
     subject = info.subj{isubj};
     
@@ -28,10 +32,24 @@ for isubj = 1:length(info.subj)
     leftseizureregions = info.(subject).allchan.sublobe(seizurechans & leftchan);
     rightseizureregions = info.(subject).allchan.sublobe(seizurechans & ~leftchan);
 
+    % Get indices of surface channels.
+    surfacechan = ~strcmpi('d', info.(subject).allchan.type);
+    
+    % Get sublobes of surface channels.
+    leftsurfaceregions = info.(subject).allchan.sublobe(surfacechan & leftchan);
+    rightsurfaceregions = info.(subject).allchan.sublobe(surfacechan & ~leftchan);
+    
+    % Get number of surface channels irrespective of region.
+    nsurface_total(isubj, 1) = sum(surfacechan & leftchan);
+    nsurface_total(isubj, 2) = sum(surfacechan & ~leftchan);
+    
     % Determine if any onset zones are in MTL/LTL.
     for iregion = 1:length(regions)
         epilepsy(isubj, iregion, 1) = sum(strcmpi(regions{iregion}, leftseizureregions)) > 0;
         epilepsy(isubj, iregion, 2) = sum(strcmpi(regions{iregion}, rightseizureregions)) > 0;
+        
+        nsurface_regions(isubj, iregion, 1) = sum(strcmpi(regions{iregion}, leftsurfaceregions));
+        nsurface_regions(isubj, iregion, 2) = sum(strcmpi(regions{iregion}, rightsurfaceregions));
     end
 end
 
@@ -55,6 +73,34 @@ ages = ages(subj_to_keep);
 epilepsy = epilepsy(subj_to_keep, :, :);
 ncorrect = ncorrect(subj_to_keep);
 ntrial = ntrial(subj_to_keep);
+nsurface_regions = nsurface_regions(subj_to_keep, :, :);
+nsurface_total = nsurface_total(subj_to_keep, :);
+
+%% Determine if there is a relationship between total number of surface channels and recall.
+nsurface_total_noside = sum(nsurface_total, 2);
+to_use = (nsurface_total_noside > 0) & (nsurface_total_noside < 200);
+figure;
+scatter(nsurface_total_noside(to_use), recall(to_use))
+[rho, pval] = corr(nsurface_total_noside(to_use), recall(to_use), 'type', 'Spearman')
+
+%% Determine if there is a relationship between total number of surface channels and age.
+nsurface_total_noside = sum(nsurface_total, 2);
+to_use = nsurface_total_noside > 0;
+figure;
+scatter(nsurface_total_noside(to_use), ages(to_use))
+[rho, pval] = corr(nsurface_total_noside(to_use), ages(to_use), 'type', 'Spearman')
+
+%% Determine if there is a relationship between recall and age.
+figure;
+scatter(ages, recall)
+[rho, pval] = corr(ages, recall, 'type', 'Spearman')
+
+%% Determine if there is a relationship between the number of left surface channels and recall.
+nsurface_oneside = nsurface_total(:, 1);
+to_use = nsurface_oneside > 0;
+figure;
+scatter(nsurface_oneside(to_use), recall(to_use))
+[rho, pval] = corr(nsurface_oneside(to_use), recall(to_use), 'type', 'Spearman')
 
 %% Break up subjects by seizure locations.
 left_mtl = epilepsy(:, 1, 1);
@@ -72,6 +118,24 @@ tl = any(any(epilepsy(:, 1:2, :), 2), 3);
 left_lpfc = epilepsy(:, 3, 1);
 right_lpfc = epilepsy(:, 3, 2);
 lpfc = left_lpfc | right_lpfc;
+
+%% Is there a relationship between age and seizure onset zone region?
+epilepsy_region = tl;
+
+ages_region = ages(epilepsy_region);
+ages_notregion = ages(~epilepsy_region);
+
+pval = ranksum(ages_region, ages_notregion);
+
+figure
+hold on
+histogram(ages_region, 10, 'FaceColor', [1, 0, 0], 'FaceAlpha', 0.5)
+plot([median(ages_region), median(ages_region)], [0, 10], 'r', 'LineWidth', 2)
+histogram(ages_notregion, 10, 'FaceColor', [0, 0, 1], 'FaceAlpha', 0.75)
+plot([median(ages_notregion), median(ages_notregion)], [0, 10], 'b', 'LineWidth', 2)
+title(['Region Onset (Red) vs. Everywhere Else (Blue), p-value = ' num2str(pval)])
+xlabel('Free Recall')
+ylabel('Number of Patients')
 
 %% Do patients with left TL epilepsy perform worse?
 figure(1); clf
@@ -186,66 +250,6 @@ end
 linkaxes(ax, 'y')
 
 %%
-seizureregions = {};
-
-for isubj = 1:length(subjects)
-    if right_ltl(isubj)
-        subject = subjects{isubj};
-        
-        % Get indices of onset zone channels. 
-        seizurechans = ismember(info.(subject).allchan.label, info.(subject).badchan.kahana);
-
-        % Get indices of left hemisphere channels.
-        leftchan = info.(subject).allchan.lefthemisphere;
-
-        % Get sublobes of onset zone channels.
-        rightseizureregions = info.(subject).allchan.ind.region(seizurechans & ~leftchan);
-        
-        seizureregions = unique([seizureregions; rightseizureregions]);
-    end
-end
-
-
-
-
-%%
-compare = mtl_epilepsy;
-close all
-figure;
-histogram(recall(compare), 20, 'FaceColor', [0, 0, 1], 'FaceAlpha', 0.75)
-figure;
-histogram(recall(~compare), 20, 'FaceColor', [1, 0, 0], 'FaceAlpha', 0.75)
-
-[~, pval] = ttest2(recall(compare), recall(~compare))
-
-%%
-% Analyze number of surface channels vs. recall
-[nsurface, ndepth] = deal(nan(length(subjects), 1));
-for isubj = 1:length(subjects)
-    nsurface(isubj) = sum(~strcmpi('d', info.(subjects{isubj}).allchan.type));
-    ndepth(isubj) = sum(strcmpi('d', info.(subjects{isubj}).allchan.type));
-end
-
-%%
-percent_depthonly = sum(nsurface == 0)/length(nsurface);
-percent_surfaceonly = sum(ndepth == 0)/length(nsurface);
-percent_depthandurface = 1 - percent_depthonly - percent_surfaceonly;
-
-%%
-% columns temporal, frontal, hippocampal, total
-[nsurface, ndepth] = deal(nan(length(subjects), 3));
-for isubj = 1:length(subjects)
-    nsurface(isubj, 1) = sum(~strcmpi('d', info.(subjects{isubj}).allchan.type) & strcmpi('t', info.(subjects{isubj}).allchan.lobe));
-    nsurface(isubj, 2) = sum(~strcmpi('d', info.(subjects{isubj}).allchan.type) & strcmpi('f', info.(subjects{isubj}).allchan.lobe));
-    nsurface(isubj, 3) = sum(~strcmpi('d', info.(subjects{isubj}).allchan.type) & cell2mat(info.(subjects{isubj}).allchan.hipp));
-    nsurface(isubj, 4) = sum(~strcmpi('d', info.(subjects{isubj}).allchan.type));
-    ndepth(isubj, 1) = sum(strcmpi('d', info.(subjects{isubj}).allchan.type) & strcmpi('t', info.(subjects{isubj}).allchan.lobe));
-    ndepth(isubj, 2) = sum(strcmpi('d', info.(subjects{isubj}).allchan.type) & strcmpi('f', info.(subjects{isubj}).allchan.lobe));
-    ndepth(isubj, 3) = sum(strcmpi('d', info.(subjects{isubj}).allchan.type) & cell2mat(info.(subjects{isubj}).allchan.hipp));
-    ndepth(isubj, 4) = sum(strcmpi('d', info.(subjects{isubj}).allchan.type));
-end
-
-%%
 
 
 
@@ -294,87 +298,5 @@ recall = [subjinfo(ismember(subject_all, info.subj)).ncorrect]./[subjinfo(ismemb
 
 ages = [subjinfo(ismember(subject_all, info.subj)).age];
 
-%%
-clc
-chaninfo = cell(length(info.subj), 1);
-chans = {};
-for isubj = 1:length(info.subj)
-    subject = info.subj{isubj};
-    disp(subject)
-
-    electrode_notes_file = ['/Volumes/DATAHD/KAHANA/Release_Metadata_20160930/electrode_categories/electrode_categories_' subject '.txt'];
-    fileID = fopen(electrode_notes_file);
-
-    electrode_notes = textscan(fileID, '%s');
-    electrode_notes = upper(electrode_notes{1});
-    
-    zone = find(contains(electrode_notes, 'ONSET'), 1);
-    interictal = find(strcmpi('interictal', electrode_notes), 1);
-    
-    if ~isempty(zone) && ~isempty(interictal)
-        epileptic = electrode_notes(zone + 1:interictal - 1);
-%         if sum(cellfun(@(x) isnumeric(x(end)), epileptic)) ~= length(epileptic)
-%             disp(epileptic)
-%         end
-        epileptic(contains(epileptic, 'ZONE')) = [];
-        epileptic(contains(epileptic, 'UNREPORTED')) = [];
-        info.(subject).badchan.kahana = epileptic;
-        chans = unique([chans; upper(epileptic)]);
-        chaninfo{isubj} = kah_chaninfo(info, subject, epileptic);
-    end
-end
-
-%%
-left = strcmpi(cellfun(@(x) x(1), chans, 'UniformOutput', false), 'L');
-right = strcmpi(cellfun(@(x) x(1), chans, 'UniformOutput', false), 'R');
-comma = contains(chans, ',');
-unreported = contains(chans, {'-', 'UNREPORTED'});
-single_letter = cellfun(@(x) length(x) == 1, chans);
-
-% comma (R1118N), 'SPREAD' (R1169P), 'AND' (R1169P), single_letter (R1118N, R1157C)
-%%
-[ntemporal_seizure, nhipp_seizure] = deal(nan(length(info.subj), 1));
-for isubj = 1:length(info.subj)
-    if isempty(chaninfo{isubj})
-        continue
-    end
-%     try
-        ntemporal_seizure(isubj) = sum(strcmpi('t', chaninfo{isubj}(2:end, 3)) | strcmpi('t', chaninfo{isubj}(2:end, 4)));
-        
-        nhipp_seizure(isubj) = 0;
-        for ichan = 2:size(chaninfo{isubj}, 1)
-            try
-                nhipp_seizure(isubj) = nhipp_seizure(isubj) + contains(chaninfo{isubj}(ichan, 6), {'hippocamp', 'entorhinal'});
-            catch
-                continue
-            end
-        end
-%     catch
-%         continue
-%     end
-end
-
-%%
-to_use = ~isnan(ntemporal_seizure);
-thing1 = nhipp_seizure(to_use);
-thing2 = recall(to_use);
-figure(1); clf
-scatter(thing1, thing2, 'filled')
-xlabel('Number of temporal channels in seizure zone')
-ylabel('Recall')
-[rho, pval] = corr(thing1, thing2')
-
-%%
-recall = [subjinfo.ncorrect]./[subjinfo.ntrial];
-nsurface = [subjinfo.surface];
-ages = [subjinfo.age];
-
-to_use = nsurface > 0 & ~isnan(recall);
-thing1 = nsurface(to_use);
-thing2 = recall(to_use);
-
-figure(1); clf
-scatter(thing1, thing2, 'filled')
-[rho, pval] = corr(thing1(:), thing2(:), 'type', 'Spearman')
 
 
