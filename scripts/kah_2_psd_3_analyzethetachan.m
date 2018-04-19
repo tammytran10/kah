@@ -1,5 +1,40 @@
 clearvars('-except', 'info')
 
+load([info.path.processed.hd 'FR1_thetabands_-800_1600_chans.mat'], 'bands')
+
+percent_theta_total = cellfun(@(x) sum(~isnan(mean(x, 2)))/size(x, 1), bands);
+
+sublobes = {'ltl', 'lpfc'};
+percent_theta_region = nan(length(info.subj), length(sublobes));
+
+for isubj = 1:length(info.subj)
+    subject = info.subj{isubj};
+    surface = ~strcmpi('d', info.(subject).allchan.type);
+    broken = ismember(info.(subject).allchan.label, ft_channelselection(info.(subject).badchan.broken, info.(subject).allchan.label));
+    epileptic = ismember(info.(subject).allchan.label, ft_channelselection(info.(subject).badchan.epileptic, info.(subject).allchan.label));
+
+    clean_surface_chans = info.(subject).allchan.label(surface & ~(broken | epileptic));
+
+    for isublobe = 1:length(sublobes)
+        % Get current region.
+        sublobe_curr = sublobes{isublobe};
+
+        % Get channels in current region across all channels.
+        chancurr = info.(subject).allchan.label(strcmpi(sublobe_curr, info.(subject).allchan.sublobe));
+
+        % Get channels in current region in clean surface channels.
+        chancurr = ismember(clean_surface_chans, chancurr);
+        
+        percent_theta_region(isubj, isublobe) = sum(~isnan(bands{isubj}(chancurr, 1)))/size(bands{isubj}, 1);
+    end
+end
+
+%%
+drop_subj = any(percent_theta_region == 0, 2);
+
+mean(percent_theta_region(~drop_subj, :))
+[~, p] = ttest(percent_theta_region(~drop_subj, 1), percent_theta_region(~drop_subj, 2))
+ranksum(percent_theta_region(~drop_subj, 1), percent_theta_region(~drop_subj, 2))
 %%
 load([info.path.processed.hd 'FR1_thetabands_-800_1600_chans.mat'], 'bands', 'amplitudes')
 old_f = bands;

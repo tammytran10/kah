@@ -6,7 +6,7 @@ info = kah_info;
 
 %%
 [hfaamp, trialinfo, chans, times] = deal(cell(length(info.subj), 1));
-for isubj = 1:length(info.subj)
+for isubj = 2 % 1:length(info.subj)
     subject = info.subj{isubj};
     disp(subject)
     [hfaamp{isubj}, trialinfo{isubj}, chans{isubj}, times{isubj}] = kah_loadftdata(info, subject, 'hfa', [-800, 1600], 1);
@@ -26,7 +26,7 @@ end
 
 %%
 % Set subject.
-isubj = 19;
+isubj = 2;
 subject = info.subj{isubj};
 
 figure(1); clf;

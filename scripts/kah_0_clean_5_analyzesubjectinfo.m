@@ -53,8 +53,8 @@ for isubj = 1:length(info.subj)
     end
 end
 
-%% Load subject info and behavioral performance.
-load([info.path.processed.hd 'other/FR1_subjinfo_previous_version.mat'])
+% Load subject info and behavioral performance.
+load([info.path.processed.hd 'FR1_subjinfo_previous_version.mat'])
 
 subjects = {subjinfo.subject};
 ncorrect = [subjinfo.ncorrect];
@@ -65,7 +65,7 @@ subjects = subjects(:); ages = ages(:); ncorrect = ncorrect(:); ntrial = ntrial(
 recall = ncorrect ./ ntrial;
 
 % Keep only subjects with FR1, reported age, and reported seizure onset zone.
-subj_to_keep = ~isnan(recall) & ages > 0 & chaninfo_available;
+subj_to_keep = ~isnan(recall) & ages >= 18 & chaninfo_available;
 
 subjects = subjects(subj_to_keep);
 recall = recall(subj_to_keep);
@@ -75,6 +75,31 @@ ncorrect = ncorrect(subj_to_keep);
 ntrial = ntrial(subj_to_keep);
 nsurface_regions = nsurface_regions(subj_to_keep, :, :);
 nsurface_total = nsurface_total(subj_to_keep, :);
+
+%% Determine number of patients with >= 3 clean LTL and lPFC channels
+sublobes = {'ltl', 'lpfc'};
+nchan = nan(length(info.subj), length(sublobes));
+for isubj = 1:length(info.subj)
+    subject = info.subj{isubj};
+    surface = ~strcmpi('d', info.(subject).allchan.type);
+    broken = ismember(info.(subject).allchan.label, ft_channelselection(info.(subject).badchan.broken, info.(subject).allchan.label));
+    epileptic = ismember(info.(subject).allchan.label, ft_channelselection(info.(subject).badchan.epileptic, info.(subject).allchan.label));
+
+    clean_surface_chans = info.(subject).allchan.label(surface & ~(broken | epileptic));
+
+    % Plot average HFA (correct vs. incorrect) across channels per region.
+    for isublobe = 1:length(sublobes)
+        % Get current region.
+        sublobe_curr = sublobes{isublobe};
+
+        % Get channels in current region across all channels.
+        chancurr = info.(subject).allchan.label(strcmpi(sublobe_curr, info.(subject).allchan.sublobe));
+
+        % Get channels in current region in clean surface channels.
+        chancurr = ismember(clean_surface_chans, chancurr);
+        nchan(isubj, isublobe) = sum(chancurr);
+    end
+end
 
 %% Determine if there is a relationship between total number of surface channels and recall.
 nsurface_total_noside = sum(nsurface_total, 2);
@@ -92,7 +117,7 @@ scatter(nsurface_total_noside(to_use), ages(to_use))
 
 %% Determine if there is a relationship between recall and age.
 figure;
-scatter(ages, recall)
+scatter(ages, recall, 'filled')
 [rho, pval] = corr(ages, recall, 'type', 'Spearman')
 
 %% Determine if there is a relationship between the number of left surface channels and recall.
