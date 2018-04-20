@@ -111,10 +111,10 @@ load([info.path.processed.hd 'FR1_hfa_0_800.mat'], 'hfapval');
 load([info.path.processed.hd 'FR1_thetabands_-800_1600_chans.mat'])
 
 % Load channel and trial information.
-load([info.path.processed.hd 'FR1_chantrialinfo.mat'], 'chanregions', 'chans')
+load([info.path.processed.hd 'FR1_chantrialinfo.mat'], 'chans', 'chanlobes', 'chanregions')
 
 % Set names of metrics.
-header = {'subject', 'age', 'channel', 'region', 'pvalhfa', 'thetabump'};
+header = {'subject', 'age', 'channel', 'lobe', 'region', 'hfapval', 'thetabump'};
 
 % Build CSV.
 csv = [];
@@ -128,10 +128,15 @@ for isubj = 1:length(info.subj)
     
     for ipair = 1:nchan
         % Build current line.
-        linecurr = {info.subj{isubj}, info.age(isubj), chans{isubj}{ipair}, chanregions{isubj}{ipair}, ...
+        thetabumpcurr = ~isnan(bands{isubj}(ipair, 1));
+        if thetabumpcurr 
+            thetabumpcurr = 1;
+        else
+            thetabumpcurr = 0;
+        end
+        linecurr = {info.subj{isubj}, info.age(isubj), chans{isubj}{ipair}, chanlobes{isubj}{ipair}, chanregions{isubj}{ipair}, ...
             hfapval{isubj}(ipair), ...
-            ~isnan(bands{isubj}(ipair, 1))};
-        linecurr = cellfun(@string, linecurr, 'UniformOutput', false); % needs to be strings
+            thetabumpcurr};
         
         % Save current line.
         subjcurr(ipair, :) = linecurr;
