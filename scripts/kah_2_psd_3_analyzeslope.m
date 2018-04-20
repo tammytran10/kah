@@ -1,6 +1,40 @@
 clear; clc
 
 info = kah_info;
+
+%%
+clearvars('-except', 'info')
+
+slopes = cell(length(info.subj), 1);
+
+for isubj = 1:length(info.subj)
+    subject = info.subj{isubj};
+
+    input = load([info.path.processed.hd subject '/fooof/' subject '_FR1_fooof_-800_0.mat'], 'fooof');
+    slopes{isubj} = input.fooof;
+end
+save([info.path.processed.hd 'FR1_slopes_-800_0.mat'], 'slopes')
+
+%%
+clearvars('-except', 'info')
+
+slope_aves = nan(length(info.subj), 1);
+
+figure(1); clf
+for isubj = 1:length(info.subj)
+    subplot(4, 5, isubj)
+    subject = info.subj{isubj};
+
+    load([info.path.processed.hd subject '/fooof/' subject '_FR1_fooof_-800_0.mat'], 'fooof')
+    hist(fooof(:))
+    xlim([-2, 6])
+    title([subject ' ' num2str(mean(fooof(:)))])
+    slope_aves(isubj) = mean(fooof(:));
+end
+subplot(4, 5, isubj + 1)
+hist(slope_aves)
+
+
 %%
 clearvars('-except', 'info')
 
