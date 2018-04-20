@@ -225,7 +225,7 @@ for isubj = 1:numel(info.subj)
         elseif temporal
             info.(subject).allchan.lobe{ichan} = 'T';
         else
-            info.(subject).allchan.lobe{ichan} = 'NA';
+            info.(subject).allchan.lobe{ichan} = 'N';
         end
         
         % Set terms to search for in region labels to map to sub-lobes.
