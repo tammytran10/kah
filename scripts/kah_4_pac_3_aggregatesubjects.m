@@ -44,6 +44,7 @@ clearvars('-except', 'info')
 experiment = 'FR1';
 timewin = [0, 1600];
 nsurrogate = 200;
+thetalabel = 'cf';
 
 tspac = cell(length(info.subj), 1);
 
