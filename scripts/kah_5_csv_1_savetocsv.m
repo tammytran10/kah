@@ -7,36 +7,62 @@ clearvars('-except', 'info')
 
 % Load slopes.
 load([info.path.processed.hd 'FR1_slopes_-800_0.mat'], 'slopes');
-preslope = slopes;
 
-load([info.path.processed.hd 'FR1_slopes_300_1300.mat'], 'slopes');
-postslope = slopes;
-clear slopes
-
-% Load thetas analytic amplitudes.
+% Load thetas analytic amplitudes using individualized bands.
 load([info.path.processed.hd 'FR1_thetaamp_cf_-800_0.mat'], 'thetaamp')
-pretheta = thetaamp;
+pretheta_cf = thetaamp;
 
 load([info.path.processed.hd 'FR1_thetaamp_cf_0_800.mat'], 'thetaamp')
-posttheta = thetaamp;
+earlytheta_cf = thetaamp;
+
+load([info.path.processed.hd 'FR1_thetaamp_cf_800_1600.mat'], 'thetaamp')
+latetheta_cf = thetaamp;
+
+clear thetaamp
+
+% Load thetas analytic amplitudes using canonical bands.
+load([info.path.processed.hd 'FR1_thetaamp_canon_-800_0.mat'], 'thetaamp')
+pretheta_canon = thetaamp;
+
+load([info.path.processed.hd 'FR1_thetaamp_canon_0_800.mat'], 'thetaamp')
+earlytheta_canon = thetaamp;
+
+load([info.path.processed.hd 'FR1_thetaamp_canon_800_1600.mat'], 'thetaamp')
+latetheta_canon = thetaamp;
+
 clear thetaamp
 
 % Load HFA amplitudes.
 load([info.path.processed.hd 'FR1_hfa_-800_0.mat'], 'hfa');
-hfabaseline = hfa;
+prehfa = hfa;
 
 load([info.path.processed.hd 'FR1_hfa_0_800.mat'], 'hfa');
-hfaencoding = hfa;
+earlyhfa = hfa;
+
+load([info.path.processed.hd 'FR1_hfa_800_1600.mat'], 'hfa');
+latehfa = hfa;
+
 clear hfa
 
-% Load within-channel tsPAC.
+% Load within-channel tsPAC using canonical bands.
+load([info.path.processed.hd 'FR1_pac_within_ts_0_1600_canon.mat']);
+tspac_canon = tspac;
+
+% Load within-channel tsPAC using individualized bands.
 load([info.path.processed.hd 'FR1_pac_within_ts_0_1600_cf.mat']);
+tspac_cf = tspac;
 
 % Load channel and trial information.
-load([info.path.processed.hd 'FR1_chantrialinfo.mat'], 'chanregions', 'chans', 'encoding')
+load([info.path.processed.hd 'FR1_chantrialinfo.mat'], 'chans', 'chanlobes', 'chanregions', 'encoding')
 
 % Set names of metrics.
-header = {'subject', 'age', 'channel', 'region', 'trial', 'encoding', 'preslope', 'postslope', 'pretheta', 'posttheta', 'prehfa', 'posthfa', 'rawtspac', 'normtspac', 'pvaltspac'};
+header = {'subject', 'age', 'channel', 'lobe', 'region', 'trial', 'encoding', ...
+    'preslope', ...
+    'pretheta_cf', 'pretheta_canon', ...
+    'earlytheta_cf', 'earlytheta_canon', ...
+    'latetheta_cf', 'latetheta_canon', ...
+    'prehfa', 'earlyhfa', 'posthfa', ...
+    'tspac_cf', 'tspac_canon'};
 
 % Build CSV.
 csv = [];
@@ -53,12 +79,15 @@ for isubj = 1:length(info.subj)
     for ipair = 1:nchan
         for itrial = 1:ntrial
             % Build current line.
-            linecurr = {info.subj{isubj}, info.age(isubj), chans{isubj}{ipair}, chanregions{isubj}{ipair}, itrial, encoding{isubj}(itrial), ...
-                preslope{isubj}(ipair, itrial), postslope{isubj}(ipair, itrial), pretheta{isubj}(ipair, itrial), posttheta{isubj}(ipair, itrial), ...
-                hfabaseline{isubj}(ipair, itrial), hfaencoding{isubj}(ipair, itrial), tspac{isubj}.raw(ipair, itrial), tspac{isubj}.norm(ipair, itrial), tspac{isubj}.pvaltrial(ipair, itrial)};
+            linecurr = {info.subj{isubj}, info.age(isubj), chans{isubj}{ipair}, chanlobes{isubj}{ipair}, chanregions{isubj}{ipair}, itrial, encoding{isubj}(itrial), ...
+                -slopes{isubj}(ipair, itrial), ...
+                pretheta_cf{isubj}(ipair, itrial), pretheta_canon{isubj}(ipair, itrial),...
+                earlytheta_cf{isubj}(ipair, itrial), earlytheta_canon{isubj}(ipair, itrial), ...
+                latetheta_cf{isubj}(ipair, itrial), latetheta_canon{isubj}(ipair, itrial), ...
+                prehfa{isubj}(ipair, itrial), earlyhfa{isubj}(ipair, itrial), latehfa{isubj}(ipair, itrial),...
+                tspac_cf{isubj}.norm(ipair, itrial), tspac_canon{isubj}.norm(ipair, itrial)};
             
             % Save current line.
-            linecurr = cellfun(@string, linecurr, 'UniformOutput', false); % needs to be strings
             subjcurr(linenum, :) = linecurr;
             linenum = linenum + 1;
         end
