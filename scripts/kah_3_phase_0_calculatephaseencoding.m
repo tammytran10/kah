@@ -47,6 +47,6 @@ for isubj = 1:length(info.subj)
     end
 
     % Save.
-    save([info.path.processed.hd subject '/phase/cf/' subject '_' experiment '_phaseencode_' testtype '_' num2str(timewin(1)) '_' num2str(timewin(2)) '_nosamp.mat'], 'statA', 'statB', 'statbetween', 'pvalA', 'pvalB', 'pvalbetween', 'chanpairs', 'times', 'trialinfo', 'chans')
+    save([info.path.processed.hd subject '/phase/cf/' subject '_' experiment '_phaseencode_' testtype '_-800_1600_nosamp.mat'], 'statA', 'statB', 'statbetween', 'pvalA', 'pvalB', 'pvalbetween', 'chanpairs', 'times', 'trialinfo', 'chans')
 end
 disp('Done.')
