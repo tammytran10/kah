@@ -3,7 +3,7 @@ clear
 % Load Kahana info.
 info = kah_info;
 
-%%
+%
 clearvars('-except', 'info')
 
 testtype = 'corrcl'; % options corrcl, wwtest, and cmtest
@@ -15,7 +15,7 @@ experiment = 'FR1';
 for isubj = 1:length(info.subj)
     % Get current subject identifier.
     subject = info.subj{isubj};
-
+    
     disp([num2str(isubj) ' ' subject])
 
     % Load subject theta phase data.
@@ -47,6 +47,6 @@ for isubj = 1:length(info.subj)
     end
 
     % Save.
-    save([info.path.processed.hd subject '/phase/cf/' subject '_' experiment '_phaseencode_' testtype '_-800_1600_nosamp.mat'], 'statA', 'statB', 'statbetween', 'pvalA', 'pvalB', 'pvalbetween', 'chanpairs', 'times', 'trialinfo', 'chans')
+    save([info.path.processed.hd subject '/phase/' thetalabel '/' subject '_' experiment '_phaseencode_' testtype '_-800_1600_nosamp.mat'], 'statA', 'statB', 'statbetween', 'pvalA', 'pvalB', 'pvalbetween', 'chanpairs', 'times', 'trialinfo', 'chans')
 end
 disp('Done.')
