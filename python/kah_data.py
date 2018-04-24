@@ -10,9 +10,10 @@ DATASETS = [single for single in SINGLECHAN] + [multi for multi in MULTICHAN] # 
 
 CHANNELS = [['channel'], ['channel'], ['channelA', 'channelB'], ['channelA', 'channelB']]
 REGIONS = [['region'], ['region'], ['regionA', 'regionB'], ['regionA', 'regionB']]
+LOBES = [['lobe'], ['lobe'], ['lobeA', 'lobeB'], ['lobeA', 'lobeB']]
 THETAS = [['thetachan'], ['thetachan'], ['thetachanA', 'thetachanB'], ['thetachanA', 'thetachanB']]
 
-SUBJECTS = ['R1020J', 'R1032D', 'R1033D', 'R1034D', 'R1045E', 'R1059J', 'R1075J', 'R1080E', 'R1120E', 'R1135E', 'R1142N', 'R1147P', 'R1149N', 'R1151E', 'R1154D', 'R1162N', 'R1166D', 'R1167M', 'R1175N']
+SUBJECTS = ['R1020J', 'R1032D', 'R1033D', 'R1034D', 'R1045E', 'R1059J', 'R1075J', 'R1080E', 'R1135E', 'R1142N', 'R1147P', 'R1149N', 'R1154D', 'R1162N', 'R1166D', 'R1167M', 'R1175N']
 
 class KahData:
     """ Load Kahana data from CSV files. 
@@ -21,18 +22,20 @@ class KahData:
     ----------
     subject : string or 'all', optional
         Subject(s) for which to classify trial outcome. default: 'all'
-    exclude_region : string or list of strings, optional
-        Regions ('T', 'F', 'N') to exclude from feature calculation. default: None
+    include_region : string or list of strings, optional
+        Regions or lobes to include during feature calculation. default: None (include all)
     enforce_theta : boolean, optional
         Keep only channels and channel pairs in which theta was present. default: False
     enforce_phase : boolean, optional
         Keep only channel pairs in which there was significant theta phase encoding. default: False
     theta_threshtype : string, optional
-        Detect theta channels based on 'pval' (binomial test, # of trials > 0.5), 'thresh' (% of trials with theta), or 'bump' (FOOOF bump
+        Detect theta channels based on 'pval' (binomial test, # of trials > 0.5), 'percent' (% of trials with theta), or 'bump' (FOOOF bump
         in average across trials). default: 'bump'
-    theta_thresh : float, optional
-        Threshold for detecting theta. For 'pval', this is the p-value threshold. For 'thresh', this is the % trials threshold. Ignored
+    theta_threshlevel : float, optional
+        Threshold for detecting theta. For 'pval', this is the p-value threshold. For 'percent', this is the % trials threshold. Ignored
         for 'bump'. default: None
+    theta_bandtype : string, optional
+        To use individualized ('cf') or canonical ('canon') theta bands.
     
     Attributes
     ----------
@@ -62,17 +65,18 @@ class KahData:
     for path in paths:
         exec(path + ' = pd.read_csv(paths[path])')
 
-    def __init__(self, subject='all', exclude_region=None, enforce_theta=False, enforce_phase=False, theta_threshtype='bump', theta_thresh=None, exclude_theta=False):
+    def __init__(self, subject='all', include_regions=None, enforce_theta=False, enforce_phase=False, theta_threshtype='bump', theta_threshlevel=None, exclude_theta=False, theta_bandtype='cf'):
         """ Create a KahData() object. """
 
         # Set input parameters. 
         self.subject = subject
-        self.exclude_region = exclude_region
+        self.include_regions = include_regions
         self.enforce_theta = enforce_theta
         self.enforce_phase = enforce_phase
         self.theta_threshtype = theta_threshtype
-        self.theta_thresh = theta_thresh
+        self.theta_threshlevel = theta_threshlevel
         self.exclude_theta = exclude_theta
+        self.theta_bandtype = theta_bandtype
 
         if self.enforce_theta and self.exclude_theta:
             raise ValueError('Theta power should not be enforced and simultaneous used to exclude channels.')
@@ -92,6 +96,7 @@ class KahData:
         self._set_theta()
         self._set_phasepair()
         self._set_betweenpac()
+        self._drop_columns()
 
     def _set_subject(self):
         """ Remove subjects, if necessary. """
@@ -102,29 +107,29 @@ class KahData:
                 setattr(self, dataset, datacurr[datacurr['subject'] == self.subject])
 
     def _set_region(self):
-        """ Exclude regions, if necessary. """
+        """ Keep only some regions, if necessary. """
 
-        if self.exclude_region:
-            for region_exclude in self.exclude_region:
-                for idata, dataset in enumerate(DATASETS):
-                    for region in REGIONS[idata]:
-                        datacurr = getattr(self, dataset)
-                        setattr(self, dataset, datacurr[datacurr[region] != region_exclude])
+        if self.include_regions:
+            for idata, dataset in enumerate(DATASETS):
+                for region in REGIONS[idata]:
+                    datacurr = getattr(self, dataset)
+                    rows_keep = np.array([True if region_ in self.include_regions else False for region_ in datacurr[region]])
+                    setattr(self, dataset, datacurr.iloc[rows_keep, :])
 
     def _set_theta(self):
         """ Determine theta channels and remove non-theta channels, if necessary. """
 
         # Mark channels that have theta.
         if self.theta_threshtype == 'pval':
-            thetachan = self.sc[self.sc['pvalposttheta'] < self.theta_thresh]['channel']
-        elif self.theta_threshtype == 'thresh':
+            thetachan = self.sc[self.sc['pvalposttheta'] < self.theta_threshlevel]['channel']
+        elif self.theta_threshtype == 'percent':
             thetachan = []
             for chan in self.sc['channel']:
                 ntheta_trial = np.sum(self.stsc[self.stsc['channel'] == chan]['posttheta'] > 0)
-                thetachan.append((ntheta_trial / len(self.stsc['trial'].unique())) > self.theta_thresh)
+                thetachan.append((ntheta_trial / len(self.stsc['trial'].unique())) > self.theta_threshlevel)
             thetachan = self.sc[thetachan]['channel']
         elif self.theta_threshtype == 'bump':
-            thetachan = self.sc[self.sc['thetabump']]['channel']
+            thetachan = self.sc[self.sc['thetabump'] == 1]['channel']
         else:
             raise ValueError('Threshold type not recognized for detecting theta channels.')
 
@@ -152,8 +157,11 @@ class KahData:
     def _set_phasepair(self):
         """ Mark phase-encoding pairs and remove non-encoding pairs, if necessary. """
 
+        # Use encoding episodes from individualized or canonical theta bands.
+        episodes_to_use = 'encodingepisodes_' + self.theta_bandtype
+
         # Mark channel pairs showing significant phase encoding.
-        phasepair = self.mc[self.mc['encodingepisodes'] > 0]['pair']
+        phasepair = self.mc[self.mc[episodes_to_use] > 0]['pair']
         for multi in MULTICHAN:
             getattr(self, multi)['phasepair'] = [1 if pair in list(phasepair) else 0 for pair in getattr(self, multi)['pair']]
 
@@ -167,16 +175,31 @@ class KahData:
         """ Determine per-trial, between-channel PAC values based the direction (AB or BA) in which PAC is strongest for that trial. """
 
         # Determine if PAC is stronger in direction AB or direction BA.
-        ab = self.stmc['normtspacAB'] > self.stmc['normtspacBA']
+        ab = self.stmc['normtspacAB_' + self.theta_bandtype] > self.stmc['normtspacBA_'  + self.theta_bandtype]
 
         # Set PAC as that in the maximal direction.
         # NOTE: Because PAC direction is set for individual trials, a pair could be TF in one trial and FT in another.
-        self.stmc['normtspacmax'] = np.maximum(self.stmc['normtspacAB'], self.stmc['normtspacBA'])
+        self.stmc['normtspacmax'] = np.maximum(self.stmc['normtspacAB_' + self.theta_bandtype], self.stmc['normtspacBA_'  + self.theta_bandtype])
 
-        # Construct region pair label using individual channel regions. This label corresponds to the AB direction.
-        regionpair = ['{}{}'.format(regionA, regionB) for regionA, regionB in zip(self.stmc['regionA'], self.stmc['regionB'])]
+        # Construct lobe pair label using individual channel regions. This label corresponds to the AB direction.
+        lobepair = ['{}{}'.format(lobeA, lobeB) for lobeA, lobeB in zip(self.stmc['lobeA'], self.stmc['lobeB'])]
 
         # Make a direction label using the region pair label. Flip the region pair label if PAC was stronger in the BA direction.
-        self.stmc['direction'] = [pair if ab_ else pair[::-1] for pair, ab_ in zip(regionpair, ab)]
+        self.stmc['direction'] = [pair if ab_ else pair[::-1] for pair, ab_ in zip(lobepair, ab)]
+
+    def _drop_columns(self):
+        """ Drop columns based on whether indivualized or canonical theta bands were specified. """
+
+        if self.theta_bandtype == 'canon':
+            band_exclude = 'cf'
+        else:
+            band_exclude = 'canon'
+        
+        # In each dataset, drop columns with 'cf' or 'canon' in the column name.
+        for dataset in DATASETS:
+            datacurr = getattr(self, dataset)
+            col_exclude = [True if band_exclude in col_name else False for col_name in datacurr.columns]
+            setattr(self, dataset, datacurr.iloc[:, np.logical_not(col_exclude)])
+
 
 
