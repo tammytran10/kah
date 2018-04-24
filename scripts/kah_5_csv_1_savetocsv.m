@@ -155,18 +155,23 @@ util_cell2csv([info.path.csv 'kah_singlechannel.csv'], csv, header)
 %% MULTI-CHANNEL
 clearvars('-except', 'info')
 
-% Load pair p-values for tsPAC.
-load([info.path.processed.hd 'FR1_pac_between_ts_0_1600_cf.mat'], 'tspac');
-
-% Load phase-encoding.
+% Load phase-encoding for individualized theta bands.
 load([info.path.processed.hd 'FR1_phase_corrcl_0_1600_cf.mat'], 'phaseencoding');
+phaseencoding_cf = phaseencoding;
+
+% Load phase-encoding for canonical theta bands.
+load([info.path.processed.hd 'FR1_phase_corrcl_0_1600_canon.mat'], 'phaseencoding');
+phaseencoding_canon = phaseencoding;
+
+clear phaseencoding
 
 % Load channel and trial information.
-load([info.path.processed.hd 'FR1_chantrialinfo.mat'], 'pairs', 'pairregions')
+load([info.path.processed.hd 'FR1_chantrialinfo.mat'], 'pairs', 'pairlobes', 'pairregions')
 
 % Set names of metrics.
-header = {'subject', 'age', 'pair', 'channelA', 'channelB', 'regionA', 'regionB', 'pvaltspacAB', 'pvaltspacBA', ...
-    'encodingonset', 'encodinglength', 'encodingstrength', 'encodingepisodes'};
+header = {'subject', 'age', 'pair', 'channelA', 'channelB', 'lobeA', 'lobeB', 'regionA', 'regionB', ...
+    'encodingonset_cf', 'encodinglength_cf', 'encodingstrength_cf', 'encodingepisodes_cf', ...
+    'encodingonset_canon', 'encodinglength_canon', 'encodingstrength_canon', 'encodingepisodes_canon'};
 
 % Build CSV.
 csv = [];
@@ -181,16 +186,18 @@ for isubj = 1:length(info.subj)
     for ipair = 1:npair
         % Build current line.
         linecurr = {info.subj{isubj}, info.age(isubj), ipair, pairs{isubj}{ipair, 1}, pairs{isubj}{ipair, 2}, ...
+            pairlobes{isubj}{ipair, 1}, pairlobes{isubj}{ipair, 2}, ...
             pairregions{isubj}{ipair, 1}, pairregions{isubj}{ipair, 2}, ...
-            tspac{isubj}.AB.pvalpair(ipair), tspac{isubj}.BA.pvalpair(ipair), ...
-            phaseencoding{isubj}.onset(ipair), phaseencoding{isubj}.time(ipair), phaseencoding{isubj}.strength(ipair), phaseencoding{isubj}.nepisode(ipair)};
-        linecurr = cellfun(@string, linecurr, 'UniformOutput', false); % needs to be strings
+            phaseencoding_cf{isubj}.onset(ipair), phaseencoding_cf{isubj}.time(ipair), phaseencoding_cf{isubj}.strength(ipair), phaseencoding_cf{isubj}.nepisode(ipair), ...
+            phaseencoding_canon{isubj}.onset(ipair), phaseencoding_canon{isubj}.time(ipair), phaseencoding_canon{isubj}.strength(ipair), phaseencoding_canon{isubj}.nepisode(ipair)};
         
-        % Replace <missing> with NaNs. Missings are when the channel pair did not show any phase encoding.
-        missing = cellfun(@ismissing, linecurr);
-        if sum(missing)
-            linecurr(missing) = {num2str(nan)};
-        end
+%         linecurr = cellfun(@string, linecurr, 'UniformOutput', false); % needs to be strings
+%         
+%         % Replace <missing> with NaNs. Missings are when the channel pair did not show any phase encoding.
+%         missing = cellfun(@ismissing, linecurr);
+%         if sum(missing)
+%             linecurr(missing) = {num2str(nan)};
+%         end
         
         % Save current line.
         subjcurr(ipair, :) = linecurr;
