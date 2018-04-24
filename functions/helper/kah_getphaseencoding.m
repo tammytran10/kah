@@ -6,17 +6,21 @@ function phaseencoding = kah_getphaseencoding(info, subject, testtype, lengththr
 experiment = 'FR1';
 
 % Get individual theta center frequencies.
-load([info.path.processed.hd experiment '_thetabands_-800_1600.mat'], 'bands')
-thetacfs = cellfun(@(x) nanmean(mean(x, 2)), bands);
+if strcmpi(thetalabel, 'cf')
+    load([info.path.processed.hd experiment '_thetabands_-800_1600_chans.mat'], 'bands')
+    thetacf = nanmean(mean(bands{strcmpi(subject, info.subj)}, 2));
+else
+    thetacf = 6;
+end
 
 % Load phase-encoding data to detect relevant channel pairs.
-load([info.path.processed.hd subject '/phase/' thetalabel '/' subject '_' experiment '_phase_' testtype '_-800_1600_nosamp.mat'], 'statA', 'statB', 'statbetween', 'pvalA', 'pvalB', 'pvalbetween', 'chanpairs', 'times', 'trialinfo', 'chans')
+load([info.path.processed.hd subject '/phase/' thetalabel '/' subject '_' experiment '_phaseencode_' testtype '_-800_1600_nosamp.mat'], 'statA', 'statB', 'statbetween', 'pvalA', 'pvalB', 'pvalbetween', 'chanpairs', 'times', 'trialinfo', 'chans')
 
 % Set episode time length.
 switch lengththreshtype
     case 'cycle'
         % Set length threshold for episodes based on number of cycles.
-        sampthresh = info.(subject).fs/thetacfs(isubj) * lengththresh;
+        sampthresh = info.(subject).fs/thetacf * lengththresh;
     case 'time'
         % Set length threshold for episodes based on seconds.
         sampthresh = info.(subject).fs * lengththresh;
