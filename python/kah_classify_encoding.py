@@ -28,7 +28,9 @@ def classify_encoding(subj_type, nseed, nresample, predictors, filename):
             if np.mod(seed, 500) == 0:
                 print(seed)
             clf = KahClassifier(predictors=predictors, seed=seed)
-            clf.classify(subjects[isubj], 'logistic', hyperparameters=None, resample='permute', nresample=nresample)
+            if seed == 0:
+                clf._set_predictors_labels(subjects[isubj])
+            clf.classify(subjects[isubj], 'logistic', hyperparameters=None, resample='permute', nresample=nresample, need_aggregate=False)
             auc[isubj, seed]= clf.roc_auc_
             if nresample > 0:
                 auc_resample[isubj, seed, :] = clf.roc_auc_resample_
