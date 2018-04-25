@@ -13,16 +13,18 @@ from sklearn import utils
 PREDICTORS_ALL =  [
                     ('preslope', 'T'), 
                     ('preslope', 'F'), 
-                    ('posttheta', 'T'),
-                    ('posttheta', 'F'),
-                    ('posthfa', 'T'), 
-                    ('posthfa', 'F'),
-                    ('normtspac', 'T'), 
-                    ('normtspac', 'F'),
-                    ('normtspacmax', 'TT'), 
+                    ('earlytheta_cf', 'T'),
+                    ('earlytheta_cf', 'F'),
+                    ('latetheta_cf', 'T'),
+                    ('latetheta_cf', 'F'),
+                    ('earlyhfa', 'T'), 
+                    ('earlyhfa', 'F'),
+                    ('latehfa', 'T'), 
+                    ('latehfa', 'F'),
+                    ('normtspac_cf', 'T'), 
+                    ('normtspac_cf', 'F'),
                     ('normtspacmax', 'TF'), 
                     ('normtspacmax', 'FT'), 
-                    ('normtspacmax', 'FF')
                 ]
 
 class KahClassifier:
@@ -190,7 +192,7 @@ class KahClassifier:
         """
 
         # Aggregate all measures per trial per region.
-        stsc_ave = kahdata.stsc.pivot_table(index=['trial', 'region'], aggfunc = np.median).unstack()
+        stsc_ave = kahdata.stsc.pivot_table(index=['trial', 'lobe'], aggfunc = np.median).unstack()
         stmc_ave = kahdata.stmc.pivot_table(index=['trial', 'direction'], aggfunc = np.median).unstack()
 
         # If all predictors are being used, get tuples of all the column names.
