@@ -70,7 +70,7 @@ class KahClassifier:
         self.test_size = test_size
         self.seed = seed
     
-    def classify(self, kahdata, method, hyperparameters=None, resample=None, nresample=1000):
+    def classify(self, kahdata, method, hyperparameters=None, resample=None, nresample=1000, need_aggregate=True):
         """ Predict trial outcome using classifier type of interest. 
         
         Parameters
@@ -86,14 +86,17 @@ class KahClassifier:
             Method to resample test set. Options are 'bootstrap', 'permute', or None. default: None
         nresample : int, optional
             Number of resampling runs to do, ignored if no resampling. default: 1000
+        need_aggregate : boolean, optional
+            True if kahdata has not been aggregated into the final predictors, False otherwise. default: True
 
         """
 
         # Save hyperparameter values.
         self.hyperparameters = hyperparameters
 
-        # Get predictor values and trial labels.
-        self._set_predictors_labels(kahdata)
+        # Get predictor values and trial labels, if necessary.
+        if need_aggregate:
+            self._set_predictors_labels(kahdata)
 
         # Split data into a training and test set.
         # The training set will be used for k-fold cross validation to pick optimal hyperparameters.
