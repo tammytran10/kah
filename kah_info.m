@@ -1296,7 +1296,7 @@ end
 %%%%%% R1128E %%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Notes:
-
+% REMOVED BECAUSE OF SWITCH TO INDIVIDUAL REGION LABELS. AFTER CLEANING, ONLY 2T REMAIN.
 % 'R1128E' - 1    - 8T   - 10F   - 141/300   - 0.4700   - 4T   - 9F    - 134/276   - 0.48551  - :)  - Done. Core. 26. 147 recall. 
 
 % Mostly depth electrodes. Very frequency epileptic events that are present
