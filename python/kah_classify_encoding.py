@@ -40,17 +40,15 @@ def classify_encoding(subj_type, nseed, nresample, predictors, filename):
 
 if __name__ == "__main__":
     # Pick subject data.
-    no_theta = ['R1033D', 'R1080E', 'R1120E']
+    no_theta = ['R1033D', 'R1034D', 'R1080E', 'R1154D']
     with_theta = [subj for subj in SUBJECTS if subj not in no_theta]
-    bad_auc = ['R1059J', 'R1149N', 'R1162N', 'R1167M', 'R1175N']
-    good_auc = [subj for subj in SUBJECTS if subj not in bad_auc and subj not in no_theta]
-    non_theta = ['R1020J', 'R1033D', 'R1034D', 'R1080E', 'R1154D', 'R1167M']
+    non_theta = ['R1020J', 'R1033D', 'R1034D', 'R1059J', 'R1142N', 'R1167M']
 
     # Tuple format is (data type, subjects to include)
-    subj_type = ('theta', with_theta)
+    subj_type = ('notheta', non_theta)
     nseed = 1000
     nresample = 1000
     predictors = 'all'
-    filename = 'kah_theta_all_nseed_1000_nresample_1000_predictors_all.pickle'
+    filename = 'kah_notheta_nontheta_nseed_1000_nresample_1000_predictors_all.pickle'
 
     classify_encoding(subj_type, nseed, nresample, predictors, filename)

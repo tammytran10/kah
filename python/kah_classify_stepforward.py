@@ -67,16 +67,29 @@ def _get_top_feature(filename, npred, predictors_available):
 
 if __name__ == "__main__":
     # Pick subject data based on exclusion criteria.
- 
-    no_theta = ['R1033D', 'R1080E', 'R1120E']
-    bad_auc = ['R1059J', 'R1149N', 'R1162N', 'R1167M', 'R1175N']
-    good_auc = [subj for subj in SUBJECTS if subj not in bad_auc and subj not in no_theta]
-    non_theta = ['R1020J', 'R1033D', 'R1034D', 'R1080E', 'R1154D', 'R1167M']
+    good_auc_all = ['R1020J', 'R1032D', 'R1034D', 'R1045E', 'R1059J', 'R1075J', 'R1080E', 'R1142N', 'R1147P', 'R1154D', 'R1166D', 'R1167M', 'R1175N'] # 13/17
+    no_theta = ['R1033D', 'R1034D', 'R1080E', 'R1154D']
+    good_auc_theta = ['R1020J', 'R1032D', 'R1045E', 'R1059J', 'R1075J', 'R1142N', 'R1147P', 'R1162N', 'R1166D', 'R1175N'] # 10/13
 
     # Tuple format is (data type, subjects to include)
-    subj_type = ('theta', good_auc)
+    subj_type = ('theta', good_auc_theta)
+    foldername = 'stepforward_theta_classifiableonly_earlypredictorsonly_nseed_200'
     nseed = 200
-    predictors = 'all'
-    foldername = 'stepforward_theta_classifiableonly_nseed_200'
+    predictors =  [
+                    ('preslope', 'T'), 
+                    ('preslope', 'F'), 
+                    ('earlytheta_cf', 'T'),
+                    ('earlytheta_cf', 'F'),
+                    # ('latetheta_cf', 'T'),
+                    # ('latetheta_cf', 'F'),
+                    ('earlyhfa', 'T'), 
+                    ('earlyhfa', 'F'),
+                    # ('latehfa', 'T'), 
+                    # ('latehfa', 'F'),
+                    ('normtspac_cf', 'T'), 
+                    ('normtspac_cf', 'F'),
+                    ('normtspacmax', 'TF'), 
+                    ('normtspacmax', 'FT'), 
+                ]
 
     classify_stepforward(subj_type, nseed, predictors, foldername)
