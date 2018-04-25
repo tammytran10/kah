@@ -42,7 +42,9 @@ def classify_stepforward(subj_type, nseed, predictors, foldername):
                 for seed in range(nseed):
                     # Classify using top features and each of the potential features left.
                     clf = KahClassifier(predictors=[*top_features, predictor], seed=seed)
-                    clf.classify(subjects[isubj], 'logistic', hyperparameters=None)
+                    if seed == 0:
+                        clf._set_predictors_labels(subjects[isubj])
+                    clf.classify(subjects[isubj], 'logistic', hyperparameters=None, need_aggregate=False)
                     auc_subset[isubj, seed] = clf.roc_auc_
                 
             # Save each new feature combo to disk.
