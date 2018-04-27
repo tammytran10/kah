@@ -38,12 +38,14 @@ def classify_stepforward(subj_type, nseed, predictors, foldername):
             print('{}/{}'.format(ipred, len(predictors_available) - 1))
             
             auc_subset = np.empty([len(subjects), nseed])
+
+            clf = KahClassifier(predictors=[*top_features, predictor])
+
             for isubj in range(len(subjects)):    
+                clf._set_predictors_labels(subjects[isubj])
                 for seed in range(nseed):
                     # Classify using top features and each of the potential features left.
-                    clf = KahClassifier(predictors=[*top_features, predictor], seed=seed)
-                    if seed == 0:
-                        clf._set_predictors_labels(subjects[isubj])
+                    clf.seed = seed           
                     clf.classify(subjects[isubj], 'logistic', hyperparameters=None, need_aggregate=False)
                     auc_subset[isubj, seed] = clf.roc_auc_
                 
