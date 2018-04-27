@@ -1,6 +1,6 @@
 *.pickle
-*.m~
-python/.cache/
+*.m
+*cache*
 python/.coverage
 python/.ipynb_checkpoints/
 python/__pycache__/
