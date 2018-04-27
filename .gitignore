@@ -1,5 +1,5 @@
 *.pickle
-*.m
+*.m~
 *cache*
 python/.coverage
 python/.ipynb_checkpoints/
