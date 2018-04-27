@@ -12,16 +12,17 @@ thetalabel = 'cf';
 % Set experiment.
 experiment = 'FR1';
 
+% Choose time window.
+timewin = [0, 800]; % ms
+   
 % Set number of resampling runs.
-load([info.path.processed.hd experiment '_pac_within_ts_trialshifts_default.mat'], 'shifttrials')
+load([info.path.processed.hd experiment '_pac_within_ts_trialshifts_default_' num2str(timewin(1)) '_' num2str(timewin(2)) '.mat'], 'shifttrials')
 nsurrogate = size(shifttrials{1}, 3);
 
 for isubj = 1:length(info.subj)    
     % Get current subject identifier.
     subject = info.subj{isubj};
     
-    % Choose time window.
-    timewin = [0, 1600]; % ms
     
     % Skip subject if all permutations have already been run.
     filecurr = [info.path.processed.hd subject '/pac/ts/' thetalabel '/' subject '_' experiment '_pac_within_ts_' num2str(timewin(1)) '_' num2str(timewin(2)) '_resamp.mat'];
