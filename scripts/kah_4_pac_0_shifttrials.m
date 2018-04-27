@@ -4,12 +4,16 @@ clear
 % Load Kahana info.
 info = kah_info;
 
+%%
 clearvars('-except', 'info')
 
 rng('default')
 
 % Set experiment.
 experiment = 'FR1';
+
+% Set time window.
+timewin = [0, 800];
 
 % Set number of resampling runs.
 nperm = 200;
@@ -24,7 +28,7 @@ for isubj = 1:length(info.subj)
     disp([num2str(isubj) ' ' subject])
     
     % Load subject HFA data.
-    [~, trialinfo, chans, times] = kah_loadftdata(info, subject, 'hfa', [0, 1600], 0);
+    [~, trialinfo, chans, times] = kah_loadftdata(info, subject, 'hfa', timewin, 0);
     ntrial = size(trialinfo, 1);
     nchan = length(chans);
     nsamp = length(times);
@@ -39,7 +43,7 @@ for isubj = 1:length(info.subj)
     shifttrials{isubj} = shifts;
 end
 
-save([info.path.processed.hd experiment '_pac_within_ts_trialshifts_default.mat'], 'shifttrials')
+save([info.path.processed.hd experiment '_pac_within_ts_trialshifts_default_' num2str(timewin(1)) '_' num2str(timewin(2)) '.mat'], 'shifttrials')
 disp('Done.')
 
 %% FOR BETWEEN-CHANNEL TSPAC
@@ -55,6 +59,9 @@ rng('default')
 % Set experiment.
 experiment = 'FR1';
 
+% Set time window.
+timewin = [0, 800];
+
 % Set number of resampling runs.
 nperm = 200;
 
@@ -65,7 +72,7 @@ for isubj = 1:length(info.subj)
     disp([num2str(isubj) ' ' subject])
     
     % Load subject HFA data.
-    [~, trialinfo, chans, times] = kah_loadftdata(info, subject, 'hfa', [0, 1600], 0);
+    [~, trialinfo, chans, times] = kah_loadftdata(info, subject, 'hfa', timewin, 0);
     ntrial = size(trialinfo, 1);
     nchan = length(chans);
     nsamp = length(times);
@@ -82,6 +89,8 @@ for isubj = 1:length(info.subj)
             end
         end
     end
-    save([info.path.processed.hd subject '/pac/ts/' subject '_' experiment '_pac_between_ts_trialshifts_default.mat'], 'shifttrials')
+    save([info.path.processed.hd subject '/pac/ts/' subject '_' experiment '_pac_between_ts_trialshifts_default_' num2str(timewin(1)) '_' num2str(timewin(2)) '.mat'], 'shifttrials')
+    save([info.path.processed.hd subject '/pac/ts/' subject '_' experiment '_pac_between_ts_trialshifts_default_-800_0.mat'], 'shifttrials')
+    save([info.path.processed.hd subject '/pac/ts/' subject '_' experiment '_pac_between_ts_trialshifts_default_800_1600.mat'], 'shifttrials')
 end
 disp('Done.')
