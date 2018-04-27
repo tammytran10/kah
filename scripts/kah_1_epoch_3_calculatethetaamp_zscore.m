@@ -34,6 +34,6 @@ for iwin = 1:length(timewins)
         toi = dsearchn(times_all{isubj}(:), timewin(:)./1000);
         thetaamp{isubj} = squeeze(mean(thetaamp_all{isubj}(:, toi(1):toi(2), :), 2));
     end
-    save([info.path.processed.hd 'FR1_thetaamp_' thetalabel '_' num2str(timewin(1)) '_' num2str(timewin(2)) '.mat'], 'thetaamp')
+    save([info.path.processed.hd 'FR1_thetaamp_' thetalabel '_' num2str(timewin(1)) '_' num2str(timewin(2)) '_zscore.mat'], 'thetaamp')
 end
 disp('Done.')
