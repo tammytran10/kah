@@ -6,7 +6,7 @@ info = kah_info;
 clearvars('-except', 'info')
 
 experiment = 'FR1';
-timewin = [0, 1600];
+timewin = [-800, 0];
 nsurrogate = 200;
 thetalabel = 'cf';
 
@@ -36,13 +36,13 @@ for isubj = 1:length(info.subj)
     end
 end
 
-save([info.path.processed.hd 'FR1_pac_between_ts_0_1600_' thetalabel '.mat'], 'tspac')
+save([info.path.processed.hd 'FR1_pac_between_ts_' num2str(timewin(1)) '_' num2str(timewin(2)) '_' thetalabel '.mat'], 'tspac')
 
 %%
 clearvars('-except', 'info')
 
 experiment = 'FR1';
-timewin = [0, 1600];
+timewin = [800, 1600];
 nsurrogate = 200;
 thetalabel = 'cf';
 
@@ -68,4 +68,4 @@ for isubj = 1:length(info.subj)
     tspac{isubj}.pvalpair = sum(median(rawtspac, 2) < squeeze(median(surrtspac, 2)), 2) ./ (nsurrogate + 1);    
 end
 
-save([info.path.processed.hd 'FR1_pac_within_ts_0_1600_' thetalabel '.mat'], 'tspac')
+save([info.path.processed.hd 'FR1_pac_within_ts_' num2str(timewin(1)) '_' num2str(timewin(2)) '_' thetalabel '.mat'], 'tspac')
