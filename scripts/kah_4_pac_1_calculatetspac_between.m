@@ -19,6 +19,9 @@ thetalabel = 'cf';
 % Set experiment.
 experiment = 'FR1';
 
+% Set time window.
+timewin = [-800, 0];
+
 % Set true if just testing one run
 testrun = 1;
 
@@ -28,11 +31,11 @@ stack = 40; timreq = 300; memreq = 0.3 * 1024^3;
 % Pre-allocate input to qsubcellfun. Each cell element is one of the inputs for one job.
 % Each job is one channel pair.
 % qsubcellfun will parallelize across all channel pairs regardless of subject.
-[subjects, chanA, chanB, pairnums, paths, thetalabels] = deal({});
+[subjects, chanA, chanB, pairnums, paths, thetalabels, timewins] = deal({});
 
 totalpair = 0;
 
-for isubj = 1:length(info.subj)
+for isubj = 1 %:length(info.subj)
     % Get current subject identifier.
     subject = info.subj{isubj};
     
@@ -53,7 +56,7 @@ for isubj = 1:length(info.subj)
     % Specify inputs to kah_calculatepac per channel pair.
     for ipair = 1:nchanpair
         % Skip job if this channel pair has already been run.
-        newfile = [clusterpath 'tspac/' thetalabel '/' subject '_FR1_pac_between_ts_0_1600_pair_' num2str(ipair) '_resamp.mat'];
+        newfile = [clusterpath 'tspac/' thetalabel '/' subject '_FR1_pac_between_ts_' num2str(timewin(1)) '_' num2str(timewin(2)) '_pair_' num2str(ipair) '_resamp.mat'];
         if exist(newfile, 'file')
             continue
         end
@@ -67,6 +70,7 @@ for isubj = 1:length(info.subj)
         pairnums = [pairnums; ipair];
         paths = [paths; clusterpath];
         thetalabels = [thetalabels; thetalabel];
+        timewins = [timewins; timewin];
     end
     disp([num2str(sum(cellfun(@(x) ~isempty(x), strfind(subjects, subject)))) '/' num2str(nchanpair)])
 end
@@ -82,13 +86,13 @@ if local
     for irun = 1:length(subjects)
         tic
         memtic
-        kah_calculatepac(subjects{irun}, chanA{irun}, chanB{irun}, pairnums{irun}, paths{irun}, thetalabels{irun});
+        kah_calculatepac(subjects{irun}, chanA{irun}, chanB{irun}, pairnums{irun}, paths{irun}, thetalabels{irun}, timewins{irun});
         memtoc
         toc
     end
 else
     % Run me!
-    qsubcellfun('kah_calculatepac', subjects, chanA, chanB, pairnums, paths, thetalabels, ...
+    qsubcellfun('kah_calculatepac', subjects, chanA, chanB, pairnums, paths, thetalabels, timewins, ...
         'backend', 'torque', 'queue', 'hotel', 'timreq', timreq, 'stack', stack, 'matlabcmd', '/opt/matlab/2015a/bin/matlab', 'options', '-V -k oe ', 'sleep', 30, 'memreq', memreq)
 end
 disp('Done.')
