@@ -1,12 +1,12 @@
-function kah_calculatepac(subject, chanA, chanB, pairnum, clusterpath, thetalabel)
+function kah_calculatepac(subject, chanA, chanB, pairnum, clusterpath, thetalabel, timewin)
 % Load theta phase data for only channels of interest. 
 theta = matfile([clusterpath 'thetaphase/' subject '_FR1_thetaphase_' thetalabel '_-800_1600.mat']);
 thetaphase = theta.data([chanA, chanB], :, :);
 
 % Limit to post-stimulus period.
 times = theta.times;
-timewin = dsearchn(times(:), [0; 1.6]);
-thetaphase = thetaphase(:, timewin(1):timewin(2), :);
+toi = dsearchn(times(:), timewin(:)./1000);
+thetaphase = thetaphase(:, toi(1):toi(2), :);
 
 % Load HFA amplitude data for only channels of interest.
 hfa = matfile([clusterpath 'hfa/' subject '_FR1_hfa_-800_1600.mat']);
@@ -16,11 +16,11 @@ hfaamp = flip(hfaamp, 1); % so that theta and HFA from opposite channels are mat
 
 % Limit to post-stimulus period.
 times = hfa.times;
-timewin = dsearchn(times(:), [0; 1.6]);
-hfaamp = hfaamp(:, timewin(1):timewin(2), :);
+toi = dsearchn(times(:), timewin(:)./1000);
+hfaamp = hfaamp(:, toi(1):toi(2), :);
 
 % Load samples to shift by. 
-shifttrials = matfile([clusterpath 'shifttrials/' subject '_FR1_pac_between_ts_trialshifts_default.mat']);
+shifttrials = matfile([clusterpath 'shifttrials/' subject '_FR1_pac_between_ts_trialshifts_default_' num2str(timewin(1)) '_' num2str(timewin(2)) '.mat']);
 shifts = squeeze(shifttrials.shifttrials(pairnum, :, :, :));
 nsurrogate = size(shifts, 3);
 
@@ -36,7 +36,7 @@ for itrial = 1:ntrial
     end
 end
 
-outputfile = [clusterpath 'tspac/' thetalabel '/' subject '_FR1_pac_between_ts_0_1600_pair_' num2str(pairnum) '_resamp.mat'];
+outputfile = [clusterpath 'tspac/' thetalabel '/' subject '_FR1_pac_between_ts_' num2str(timewin(1)) '_' num2str(timewin(2)) '_pair_' num2str(pairnum) '_resamp.mat'];
 save(outputfile, 'pacbetween');
 end
 
