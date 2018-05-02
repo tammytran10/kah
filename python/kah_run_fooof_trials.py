@@ -3,14 +3,11 @@
 from fooof import FOOOF
 import scipy.io as sio
 import numpy as np
-from kah_data import SUBJECTS
 
-if __name__ == "__main__":
-    # Change these to process different PSDs.
-    timewin = [-800, 0]
-    padlabel = ''
+SUBJECTS = ['R1020J', 'R1032D', 'R1033D', 'R1034D', 'R1045E', 'R1059J', 'R1075J', 'R1080E', 'R1120E', 'R1135E', 'R1142N', 'R1147P', 'R1149N', 'R1151E', 'R1154D', 'R1162N', 'R1166D', 'R1167M', 'R1175N']
 
-    # Find theta peaks and bandwidths for each channel per subject.
+def run_fooof_trials(timewin, padlabel):
+    """ Use FOOOF to get individual trial slope and HFA (offset) measurements. """
     for subject in SUBJECTS:
         print(subject)
         
@@ -22,29 +19,46 @@ if __name__ == "__main__":
         psds = mat_contents['psds']
         
         # Initialize FOOOF model.
-        # low limit 2.5 for [-800, 0] unpadded
         foof_model = FOOOF(background_mode='fixed', peak_width_limits=[2.5, 12], peak_threshold=np.inf)
-
-        # Define frequency range over which to model PSD. Use a low frequency range to optimize theta fits.
-        # A more broadband range ([2, 50]) includes massive beta that swaps all estimates.
-        freq_range = [2, 55]
             
         # Initialize output (list of FOOOF oscillation parameters), one for each channel and trial.
-        output = [[[] for _ in range(psds.shape[-1])] for _ in range(psds.shape[0])]
+        slopes = [[[] for _ in range(psds.shape[-1])] for _ in range(psds.shape[0])]
+        hfa = [[[] for _ in range(psds.shape[-1])] for _ in range(psds.shape[0])]
         
         # Fit model per channel per trial.
         for ichan in range(psds.shape[0]):
             for itrial in range(psds.shape[-1]):
+                # Fit for slope and HFA.
                 try:
-                    foof_model.fit(freq, psds[ichan, :, itrial], freq_range)
+                    foof_model.fit(freq, psds[ichan, :, itrial], [2, 150])
                 except Exception:
-                    print('Skipping channel ' + str(ichan) + ', trial ' + str(itrial))
+                    print('Skipping channel {}, trial {} because of slope'.format(ichan, itrial))
                     continue
-                if foof_model.peak_params_.shape[0] != 0:
-                    raise ValueError('Peak detected. Raise the peak_threshold parameter.')
-                output[ichan][itrial] = foof_model.background_params_[1]
+                hfa[ichan][itrial] = foof_model.background_params_[0]
+                slopes[ichan][itrial] = foof_model.background_params_[1]
+
+                # # Fit for HFA.
+                # try:
+                #     foof_model.fit(freq, psds[ichan, :, itrial], [2, 150])
+                # except Exception:
+                #     print('Skipping channel {}, trial {} because of hfa'.format(ichan, itrial))
+                #     continue
+                # hfa[ichan][itrial] = foof_model.background_params_[0]
         
         # Save to .mat file.
-        sio.savemat('/Volumes/DATAHD/Active/KAH/' + subject + '/fooof/' + subject + '_FR1_fooof_' + str(timewin[0]) + '_' + str(timewin[1]) + padlabel + '.mat', {'fooof':output})
+        sio.savemat('/Volumes/DATAHD/Active/KAH/' + subject + '/fooof/' + subject + '_FR1_fooof_' + str(timewin[0]) + '_' + str(timewin[1]) + padlabel + '_slopes_hfa.mat', {'slopes':slopes, 'hfa':hfa})
 
     print('Done.')
+
+if __name__ == "__main__":
+    padlabel =  ''
+ 
+    timewin = [-800, 0]
+    run_fooof_trials(timewin, padlabel)
+
+    timewin = [0, 800]
+    run_fooof_trials(timewin, padlabel)
+
+    timewin = [800, 1600]
+    run_fooof_trials(timewin, padlabel)
+
