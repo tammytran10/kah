@@ -42,30 +42,35 @@ save([info.path.processed.hd 'FR1_pac_between_ts_' num2str(timewin(1)) '_' num2s
 clearvars('-except', 'info')
 
 experiment = 'FR1';
-timewin = [800, 1600];
 nsurrogate = 200;
 thetalabel = 'cf';
 
-tspac = cell(length(info.subj), 1);
+timewins = {[-800, 0], [0, 800], [800, 1600]};
 
-for isubj = 1:length(info.subj)
-    subject = info.subj{isubj};
-    disp([num2str(isubj) ' ' subject])
-    
-    load([info.path.processed.hd subject '/pac/ts/' thetalabel '/' subject '_' experiment '_pac_within_ts_' num2str(timewin(1)) '_' num2str(timewin(2)) '_resamp.mat'], 'pacwithin', 'trialinfo', 'chans')
+for iwin = 1:length(timewins)
+    timewin = timewins{iwin};
+    tspac = cell(length(info.subj), 1);
 
-    tspac{isubj} = struct;
-    
-    rawtspac = squeeze(pacwithin(:, :, end));
-    tspac{isubj}.raw = rawtspac;
+    for isubj = 1:length(info.subj)
+        subject = info.subj{isubj};
+        disp([num2str(isubj) ' ' subject])
 
-    surrtspac = squeeze(pacwithin(:, :, 1:nsurrogate));
+        load([info.path.processed.hd subject '/pac/ts/' thetalabel '/' subject '_' experiment '_pac_within_ts_' num2str(timewin(1)) '_' num2str(timewin(2)) '_resamp.mat'], 'pacwithin', 'trialinfo', 'chans')
 
-    tspac{isubj}.norm = (rawtspac - mean(surrtspac, 3)) ./ std(surrtspac, [], 3);
+        tspac{isubj} = struct;
 
-    tspac{isubj}.pvaltrial = ((sum(rawtspac < surrtspac, 3) + 1) ./ (nsurrogate + 1));
+        rawtspac = squeeze(pacwithin(:, :, end));
+        tspac{isubj}.raw = rawtspac;
 
-    tspac{isubj}.pvalpair = sum(median(rawtspac, 2) < squeeze(median(surrtspac, 2)), 2) ./ (nsurrogate + 1);    
+        surrtspac = squeeze(pacwithin(:, :, 1:nsurrogate));
+        tspac{isubj}.surr = surrtspac;
+
+        tspac{isubj}.norm = (rawtspac - mean(surrtspac, 3)) ./ std(surrtspac, [], 3);
+
+        tspac{isubj}.pvaltrial = ((sum(rawtspac < surrtspac, 3) + 1) ./ (nsurrogate + 1));
+
+        tspac{isubj}.pvalpair = sum(median(rawtspac, 2) < squeeze(median(surrtspac, 2)), 2) ./ (nsurrogate + 1);    
+    end
+
+    save([info.path.processed.hd 'FR1_pac_within_ts_' num2str(timewin(1)) '_' num2str(timewin(2)) '_' thetalabel '.mat'], 'tspac')
 end
-
-save([info.path.processed.hd 'FR1_pac_within_ts_' num2str(timewin(1)) '_' num2str(timewin(2)) '_' thetalabel '.mat'], 'tspac')
