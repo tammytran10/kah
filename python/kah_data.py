@@ -34,8 +34,6 @@ class KahData:
     theta_threshlevel : float, optional
         Threshold for detecting theta. For 'pval', this is the p-value threshold. For 'percent', this is the % trials threshold. Ignored
         for 'bump'. default: None
-    theta_bandtype : string, optional
-        To use individualized ('cf') or canonical ('canon') theta bands.
     
     Attributes
     ----------
@@ -65,7 +63,7 @@ class KahData:
     for path in paths:
         exec(path + ' = pd.read_csv(paths[path])')
 
-    def __init__(self, subject='all', include_regions=None, enforce_theta=False, enforce_phase=False, theta_threshtype='bump', theta_threshlevel=None, exclude_theta=False, theta_bandtype='cf'):
+    def __init__(self, subject='all', include_regions=None, enforce_theta=False, enforce_phase=False, theta_threshtype='bump', theta_threshlevel=None, exclude_theta=False):
         """ Create a KahData() object. """
 
         # Set input parameters. 
@@ -76,7 +74,6 @@ class KahData:
         self.theta_threshtype = theta_threshtype
         self.theta_threshlevel = theta_threshlevel
         self.exclude_theta = exclude_theta
-        self.theta_bandtype = theta_bandtype
 
         if self.enforce_theta and self.exclude_theta:
             raise ValueError('Theta power should not be enforced and simultaneous used to exclude channels.')
@@ -96,7 +93,6 @@ class KahData:
         self._set_theta()
         self._set_phasepair()
         self._set_betweenpac()
-        self._drop_columns()
 
     def _set_subject(self):
         """ Remove subjects, if necessary. """
@@ -158,7 +154,7 @@ class KahData:
         """ Mark phase-encoding pairs and remove non-encoding pairs, if necessary. """
 
         # Use encoding episodes from individualized or canonical theta bands.
-        episodes_to_use = 'encodingepisodes_' + self.theta_bandtype
+        episodes_to_use = 'encodingepisodes'
 
         # Mark channel pairs showing significant phase encoding.
         phasepair = self.mc[self.mc[episodes_to_use] > 0]['pair']
@@ -175,11 +171,11 @@ class KahData:
         """ Determine per-trial, between-channel PAC values based the direction (AB or BA) in which PAC is strongest for that trial. """
 
         # Determine if PAC is stronger in direction AB or direction BA.
-        ab = self.stmc['normtspacAB_' + self.theta_bandtype] > self.stmc['normtspacBA_'  + self.theta_bandtype]
+        ab = self.stmc['normtspacAB'] > self.stmc['normtspacBA']
 
         # Set PAC as that in the maximal direction.
         # NOTE: Because PAC direction is set for individual trials, a pair could be TF in one trial and FT in another.
-        self.stmc['normtspacmax'] = np.maximum(self.stmc['normtspacAB_' + self.theta_bandtype], self.stmc['normtspacBA_'  + self.theta_bandtype])
+        self.stmc['normtspacmax'] = np.maximum(self.stmc['normtspacAB'], self.stmc['normtspacBA'])
 
         # Construct lobe pair label using individual channel regions. This label corresponds to the AB direction.
         lobepair = ['{}{}'.format(lobeA, lobeB) for lobeA, lobeB in zip(self.stmc['lobeA'], self.stmc['lobeB'])]
@@ -187,19 +183,6 @@ class KahData:
         # Make a direction label using the region pair label. Flip the region pair label if PAC was stronger in the BA direction.
         self.stmc['direction'] = [pair if ab_ else pair[::-1] for pair, ab_ in zip(lobepair, ab)]
 
-    def _drop_columns(self):
-        """ Drop columns based on whether indivualized or canonical theta bands were specified. """
-
-        if self.theta_bandtype == 'canon':
-            band_exclude = 'cf'
-        else:
-            band_exclude = 'canon'
-        
-        # In each dataset, drop columns with 'cf' or 'canon' in the column name.
-        for dataset in DATASETS:
-            datacurr = getattr(self, dataset)
-            col_exclude = [True if band_exclude in col_name else False for col_name in datacurr.columns]
-            setattr(self, dataset, datacurr.iloc[:, np.logical_not(col_exclude)])
 
 
 
