@@ -1,3 +1,7 @@
+clear
+
+info = kah_info;
+
 %%
 [~, trialinfo, chans, times] = deal(cell(length(info.subj), 1));
 for isubj = 1:length(info.subj)
@@ -29,19 +33,19 @@ for iwin = 1:length(timewins)
     end
 end
 
-% Load theta center frequencies.
-load([info.path.processed.hd 'FR1_thetabands_-800_1600_chans.mat'])
-thetabump = cellfun(@(x) ~isnan(x(:, 1)), bands, 'UniformOutput', false);
-
-for isubj = 1:length(info.subj)
-    chans{isubj} = chans{isubj}(thetabump{isubj});
-    for iwin = 1:length(timewins)
-        thetaamp{iwin}{isubj} = thetaamp{iwin}{isubj}(thetabump{isubj}, :);
-        hfa{iwin}{isubj} = hfa{iwin}{isubj}(thetabump{isubj}, :);
-        slopes{iwin}{isubj} = slopes{iwin}{isubj}(thetabump{isubj}, :);
-        pacwithin{iwin}{isubj} = pacwithin{iwin}{isubj}(thetabump{isubj}, :);
-    end
-end
+% % Load theta center frequencies.
+% load([info.path.processed.hd 'FR1_thetabands_-800_1600_chans.mat'])
+% thetabump = cellfun(@(x) ~isnan(x(:, 1)), bands, 'UniformOutput', false);
+% 
+% for isubj = 1:length(info.subj)
+%     chans{isubj} = chans{isubj}(thetabump{isubj});
+%     for iwin = 1:length(timewins)
+%         thetaamp{iwin}{isubj} = thetaamp{iwin}{isubj}(thetabump{isubj}, :);
+%         hfa{iwin}{isubj} = hfa{iwin}{isubj}(thetabump{isubj}, :);
+%         slopes{iwin}{isubj} = slopes{iwin}{isubj}(thetabump{isubj}, :);
+%         pacwithin{iwin}{isubj} = pacwithin{iwin}{isubj}(thetabump{isubj}, :);
+%     end
+% end
 
 %%
 datacurr = pacwithin;
@@ -90,7 +94,7 @@ end
 linkaxes(ax, 'xy');
 
 %%
-datacurr = pacwithin;
+datacurr = slopes;
 [pvals, teststats] = deal(nan(length(info.subj), 2, 2));
 
 for isubj = 1:length(info.subj)
@@ -149,9 +153,63 @@ for isubj = 1:length(info.subj)
 %     linkaxes(ax, 'xy');
 end
 
-%%
 clc
 [~, pval] = ttest(teststats(:, 1, 1))
 [~, pval] = ttest(teststats(:, 1, 2))
 [~, pval] = ttest(teststats(:, 2, 1))
 [~, pval] = ttest(teststats(:, 2, 2))
+
+%%
+datacurr = pacwithin;
+[pvals, teststats] = deal(nan(length(info.subj), 3, 2));
+
+for isubj = 1:length(info.subj)
+    % Set subject.
+    subject = info.subj{isubj};
+    
+    if strcmpi(subject, 'R1120E') || strcmpi(subject, 'R1151E')
+        continue
+    end
+
+    % Get sublobe names.
+    sublobes = {'ltl', 'lpfc'};
+
+    for iwin = 1:length(timewins)
+        for isublobe = 1:length(sublobes)
+
+            % Get current region.
+            sublobe_curr = sublobes{isublobe};
+
+            % Get channels in current region across all channels.
+            chancurr = info.(subject).allchan.label(strcmpi(sublobe_curr, info.(subject).allchan.sublobe));
+
+            % Get channels in current region in clean surface channels.
+            chancurr = ismember(chans{isubj}, chancurr);
+
+            % Get correct vs. incorrect trial labels.
+            encoding = logical(trialinfo{isubj}(:, 3));
+
+            %
+            forgotten = mean(datacurr{iwin}{isubj}(chancurr, ~encoding));
+            remembered = mean(datacurr{iwin}{isubj}(chancurr, encoding));
+
+            try
+%                 [~, ~, stats] = ranksum(forgotten, remembered);
+%                 teststats(isubj, iwin, isublobe) = stats.zval;
+                [~, pval, ~, stats] = ttest2(forgotten, remembered);
+                pvals(isubj, iwin, isublobe) = pval;
+                teststats(isubj, iwin, isublobe) = stats.tstat;
+            catch
+                continue
+            end
+        end
+    end
+end
+
+clc
+[~, pval] = ttest(teststats(:, 1, 1))
+[~, pval] = ttest(teststats(:, 1, 2))
+[~, pval] = ttest(teststats(:, 2, 1))
+[~, pval] = ttest(teststats(:, 2, 2))
+[~, pval] = ttest(teststats(:, 3, 1))
+[~, pval] = ttest(teststats(:, 3, 2))
