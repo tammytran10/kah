@@ -5,65 +5,20 @@ info = kah_info;
 %% SINGLE-TRIAL, SINGLE-CHANNEL
 clearvars('-except', 'info')
 
-% Load slopes.
-load([info.path.processed.hd 'FR1_slopes_-800_0.mat'], 'slopes');
-
-% Load thetas analytic amplitudes using individualized bands.
-load([info.path.processed.hd 'FR1_thetaamp_cf_-800_0.mat'], 'thetaamp')
-pretheta_cf = thetaamp;
-
-load([info.path.processed.hd 'FR1_thetaamp_cf_0_800.mat'], 'thetaamp')
-earlytheta_cf = thetaamp;
-
-load([info.path.processed.hd 'FR1_thetaamp_cf_800_1600.mat'], 'thetaamp')
-latetheta_cf = thetaamp;
-
-clear thetaamp
-
-% Load thetas analytic amplitudes using canonical bands.
-load([info.path.processed.hd 'FR1_thetaamp_canon_-800_0.mat'], 'thetaamp')
-pretheta_canon = thetaamp;
-
-load([info.path.processed.hd 'FR1_thetaamp_canon_0_800.mat'], 'thetaamp')
-earlytheta_canon = thetaamp;
-
-load([info.path.processed.hd 'FR1_thetaamp_canon_800_1600.mat'], 'thetaamp')
-latetheta_canon = thetaamp;
-
-clear thetaamp
-
-% Load HFA amplitudes.
-load([info.path.processed.hd 'FR1_hfa_-800_0.mat'], 'hfa');
-prehfa = hfa;
-
-load([info.path.processed.hd 'FR1_hfa_0_800.mat'], 'hfa');
-earlyhfa = hfa;
-
-load([info.path.processed.hd 'FR1_hfa_800_1600.mat'], 'hfa');
-latehfa = hfa;
-
-clear hfa
-
-% Load within-channel tsPAC using canonical bands.
-load([info.path.processed.hd 'FR1_pac_within_ts_0_1600_canon.mat']);
-tspac_canon = tspac;
-
-% Load within-channel tsPAC using individualized bands.
-load([info.path.processed.hd 'FR1_pac_within_ts_0_1600_cf.mat']);
-tspac_cf = tspac;
+% Load single-trial, single-channel measures.
+timewins = {[-800, 0], [0, 800], [800, 1600]};
+[thetaamp, hfa, slopes, pacwithin_raw, pacwithin_norm] = kah_loadstsc(info, timewins);
 
 % Load channel and trial information.
 load([info.path.processed.hd 'FR1_chantrialinfo.mat'], 'chans', 'chanlobes', 'chanregions', 'encoding')
 
 % Set names of metrics.
 header = {'subject', 'age', 'channel', 'lobe', 'region', 'trial', 'encoding', ...
-    'preslope', ...
-    'pretheta_cf', 'pretheta_canon', ...
-    'earlytheta_cf', 'earlytheta_canon', ...
-    'latetheta_cf', 'latetheta_canon', ...
+    'pretheta', 'earlytheta', 'latetheta', ...
     'prehfa', 'earlyhfa', 'latehfa', ...
-    'rawtspac_cf', 'rawtspac_canon', ...
-    'normtspac_cf', 'normtspac_canon'};
+    'preslope', 'earlyslope', 'lateslope', ...
+    'prerawpac', 'earlyrawpac', 'laterawpac', ...
+    'prenormpac', 'earlynormpac', 'latenormpac'};
 
 % Build CSV.
 csv = [];
@@ -77,17 +32,15 @@ for isubj = 1:length(info.subj)
     subjcurr = cell(nchan * ntrial, length(header));
     linenum = 1; % next line to fill in for the current subject.
     
-    for ipair = 1:nchan
+    for ichan = 1:nchan
         for itrial = 1:ntrial
             % Build current line.
-            linecurr = {info.subj{isubj}, info.age(isubj), chans{isubj}{ipair}, chanlobes{isubj}{ipair}, chanregions{isubj}{ipair}, itrial, encoding{isubj}(itrial), ...
-                -slopes{isubj}(ipair, itrial), ...
-                pretheta_cf{isubj}(ipair, itrial), pretheta_canon{isubj}(ipair, itrial),...
-                earlytheta_cf{isubj}(ipair, itrial), earlytheta_canon{isubj}(ipair, itrial), ...
-                latetheta_cf{isubj}(ipair, itrial), latetheta_canon{isubj}(ipair, itrial), ...
-                prehfa{isubj}(ipair, itrial), earlyhfa{isubj}(ipair, itrial), latehfa{isubj}(ipair, itrial),...
-                tspac_cf{isubj}.raw(ipair, itrial), tspac_canon{isubj}.raw(ipair, itrial), ...
-                tspac_cf{isubj}.norm(ipair, itrial), tspac_canon{isubj}.norm(ipair, itrial)};
+            linecurr = {info.subj{isubj}, info.age(isubj), chans{isubj}{ichan}, chanlobes{isubj}{ichan}, chanregions{isubj}{ichan}, itrial, encoding{isubj}(itrial), ...
+                thetaamp{1}{isubj}(ichan, itrial), thetaamp{2}{isubj}(ichan, itrial), thetaamp{3}{isubj}(ichan, itrial), ...
+                hfa{1}{isubj}(ichan, itrial), hfa{2}{isubj}(ichan, itrial), hfa{3}{isubj}(ichan, itrial), ...
+                -slopes{1}{isubj}(ichan, itrial), -slopes{2}{isubj}(ichan, itrial), -slopes{3}{isubj}(ichan, itrial), ...
+                pacwithin_raw{1}{isubj}(ichan, itrial), pacwithin_raw{2}{isubj}(ichan, itrial), pacwithin_raw{3}{isubj}(ichan, itrial), ...
+                pacwithin_norm{1}{isubj}(ichan, itrial), pacwithin_norm{2}{isubj}(ichan, itrial), pacwithin_norm{3}{isubj}(ichan, itrial)};
             
             % Save current line.
             subjcurr(linenum, :) = linecurr;
@@ -106,9 +59,6 @@ util_cell2csv([info.path.csv 'kah_singletrial_singlechannel.csv'], csv, header)
 %% SINGLE-CHANNEL
 clearvars('-except', 'info')
 
-% Load HFA p-values.
-load([info.path.processed.hd 'FR1_hfa_0_800.mat'], 'hfapval');
-
 % Load theta center frequencies.
 load([info.path.processed.hd 'FR1_thetabands_-800_1600_chans.mat'])
 
@@ -116,7 +66,7 @@ load([info.path.processed.hd 'FR1_thetabands_-800_1600_chans.mat'])
 load([info.path.processed.hd 'FR1_chantrialinfo.mat'], 'chans', 'chanlobes', 'chanregions')
 
 % Set names of metrics.
-header = {'subject', 'age', 'channel', 'lobe', 'region', 'hfapval', 'thetabump'};
+header = {'subject', 'age', 'channel', 'lobe', 'region', 'thetabump'};
 
 % Build CSV.
 csv = [];
@@ -128,16 +78,15 @@ for isubj = 1:length(info.subj)
     % Pre-allocate per subject for speed.
     subjcurr = cell(nchan, length(header));
     
-    for ipair = 1:nchan
+    for ichan = 1:nchan
         % Build current line.
-        thetabumpcurr = ~isnan(bands{isubj}(ipair, 1));
-        if thetabumpcurr 
+        thetabumpcurr = ~isnan(bands{isubj}(ichan, 1));
+        if thetabumpcurr
             thetabumpcurr = 1;
         else
             thetabumpcurr = 0;
         end
-        linecurr = {info.subj{isubj}, info.age(isubj), chans{isubj}{ipair}, chanlobes{isubj}{ipair}, chanregions{isubj}{ipair}, ...
-            hfapval{isubj}(ipair), ...
+        linecurr = {info.subj{isubj}, info.age(isubj), chans{isubj}{ichan}, chanlobes{isubj}{ichan}, chanregions{isubj}{ichan}, ...
             thetabumpcurr};
         
         % Save current line.
@@ -157,21 +106,13 @@ clearvars('-except', 'info')
 
 % Load phase-encoding for individualized theta bands.
 load([info.path.processed.hd 'FR1_phase_corrcl_0_1600_cf.mat'], 'phaseencoding');
-phaseencoding_cf = phaseencoding;
-
-% Load phase-encoding for canonical theta bands.
-load([info.path.processed.hd 'FR1_phase_corrcl_0_1600_canon.mat'], 'phaseencoding');
-phaseencoding_canon = phaseencoding;
-
-clear phaseencoding
 
 % Load channel and trial information.
 load([info.path.processed.hd 'FR1_chantrialinfo.mat'], 'pairs', 'pairlobes', 'pairregions')
 
 % Set names of metrics.
 header = {'subject', 'age', 'pair', 'channelA', 'channelB', 'lobeA', 'lobeB', 'regionA', 'regionB', ...
-    'encodingonset_cf', 'encodinglength_cf', 'encodingstrength_cf', 'encodingepisodes_cf', ...
-    'encodingonset_canon', 'encodinglength_canon', 'encodingstrength_canon', 'encodingepisodes_canon'};
+    'encodingonset', 'encodinglength', 'encodingstrength', 'encodingepisodes'};
 
 % Build CSV.
 csv = [];
@@ -188,16 +129,7 @@ for isubj = 1:length(info.subj)
         linecurr = {info.subj{isubj}, info.age(isubj), ipair, pairs{isubj}{ipair, 1}, pairs{isubj}{ipair, 2}, ...
             pairlobes{isubj}{ipair, 1}, pairlobes{isubj}{ipair, 2}, ...
             pairregions{isubj}{ipair, 1}, pairregions{isubj}{ipair, 2}, ...
-            phaseencoding_cf{isubj}.onset(ipair), phaseencoding_cf{isubj}.time(ipair), phaseencoding_cf{isubj}.strength(ipair), phaseencoding_cf{isubj}.nepisode(ipair), ...
-            phaseencoding_canon{isubj}.onset(ipair), phaseencoding_canon{isubj}.time(ipair), phaseencoding_canon{isubj}.strength(ipair), phaseencoding_canon{isubj}.nepisode(ipair)};
-        
-%         linecurr = cellfun(@string, linecurr, 'UniformOutput', false); % needs to be strings
-%         
-%         % Replace <missing> with NaNs. Missings are when the channel pair did not show any phase encoding.
-%         missing = cellfun(@ismissing, linecurr);
-%         if sum(missing)
-%             linecurr(missing) = {num2str(nan)};
-%         end
+            phaseencoding{isubj}.onset(ipair), phaseencoding{isubj}.time(ipair), phaseencoding{isubj}.strength(ipair), phaseencoding{isubj}.nepisode(ipair)};
         
         % Save current line.
         subjcurr(ipair, :) = linecurr;
@@ -216,23 +148,18 @@ disp('Done.')
 clearvars('-except', 'info')
 
 % Load tsPAC using individualized bands.
-load([info.path.processed.hd 'FR1_pac_between_ts_0_1600_cf.mat'], 'tspac');
-tspac_cf = tspac;
-
-% Load tsPAC using canonical bands.
-load([info.path.processed.hd 'FR1_pac_between_ts_0_1600_canon.mat'], 'tspac');
-tspac_canon = tspac;
-clear tspac
+timewins = {[-800, 0], [0, 800], [800, 1600]};
+pacbetween = kah_loadstmc(info, timewins);
 
 % Load channel and trial information.
 load([info.path.processed.hd 'FR1_chantrialinfo.mat'], 'pairs', 'pairlobes', 'pairregions', 'encoding')
 
 % Set names of metrics.
 header = {'subject', 'age', 'pair', 'channelA', 'channelB', 'lobeA', 'lobeB', 'regionA', 'regionB', 'trial', 'encoding', ...
-    'rawtspacAB_cf', 'rawtspacBA_cf', ...
-    'rawtspacAB_canon', 'rawtspacBA_canon', ...
-    'normtspacAB_cf', 'normtspacBA_cf', ...
-    'normtspacAB_canon', 'normtspacBA_canon'};
+    'prerawpacAB', 'earlyrawpacAB', 'laterawpacAB', ...
+    'prerawpacBA', 'earlyrawpacBA', 'laterawpacBA', ...
+    'prenormpacAB', 'earlynormpacAB', 'latenormpacAB', ...
+    'prenormpacBA', 'earlynormpacBA', 'latenormpacBA'};
 
 for isubj = 1:length(info.subj)
     % Skip this subject if their data has already been saved.
@@ -251,35 +178,31 @@ for isubj = 1:length(info.subj)
     
     for ipair = 1:npair
         disp([num2str(isubj) ' ' num2str(ipair) '/' num2str(npair)])
-        
         for itrial = 1:ntrial
             % Build current line.
             linecurr = {info.subj{isubj}, info.age(isubj), ipair, pairs{isubj}{ipair, 1}, pairs{isubj}{ipair, 2}, ...
                 pairlobes{isubj}{ipair, 1}, pairlobes{isubj}{ipair, 2}, ...
                 pairregions{isubj}{ipair, 1}, pairregions{isubj}{ipair, 2}, ...
                 itrial, encoding{isubj}(itrial), ...
-                tspac_cf{isubj}.AB.raw(ipair, itrial), tspac_cf{isubj}.BA.raw(ipair, itrial), ...
-                tspac_canon{isubj}.AB.raw(ipair, itrial), tspac_canon{isubj}.BA.raw(ipair, itrial), ...
-                tspac_cf{isubj}.AB.norm(ipair, itrial), tspac_cf{isubj}.BA.norm(ipair, itrial), ...
-                tspac_canon{isubj}.AB.norm(ipair, itrial), tspac_canon{isubj}.BA.norm(ipair, itrial) ...
-                };
-%             linecurr = cellfun(@string, linecurr, 'UniformOutput', false); % needs to be strings
-            
-%             % Replace <missing> with NaNs.
-%             missing = cellfun(@ismissing, linecurr);
-%             if sum(missing)
-%                 disp('here')
-%                 return
-%                 linecurr(missing) = {num2str(nan)};
-%             end
+                pacbetween{1, 1, 1}{isubj}(ipair, itrial), ...
+                pacbetween{2, 1, 1}{isubj}(ipair, itrial), ...
+                pacbetween{3, 1, 1}{isubj}(ipair, itrial), ...   
+                pacbetween{1, 1, 2}{isubj}(ipair, itrial), ...
+                pacbetween{2, 1, 2}{isubj}(ipair, itrial), ...
+                pacbetween{3, 1, 2}{isubj}(ipair, itrial), ...             
+                pacbetween{1, 2, 1}{isubj}(ipair, itrial), ...
+                pacbetween{2, 2, 1}{isubj}(ipair, itrial), ...
+                pacbetween{3, 2, 1}{isubj}(ipair, itrial), ...               
+                pacbetween{1, 2, 2}{isubj}(ipair, itrial), ...
+                pacbetween{2, 2, 2}{isubj}(ipair, itrial), ...
+                pacbetween{3, 2, 2}{isubj}(ipair, itrial)};
             
             % Save current line.
             subjcurr(linenum, :) = linecurr;
-            linenum = linenum + 1;            
+            linenum = linenum + 1;
         end
-               
     end
-
+    
     % Save current line right to disk.
     disp('Saving.')
     util_cell2csv(filecurr, subjcurr, header, [])
