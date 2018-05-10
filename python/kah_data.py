@@ -92,7 +92,7 @@ class KahData:
         self._set_region()
         self._set_theta()
         self._set_phasepair()
-        self._set_betweenpac()
+        # self._set_betweenpac()
 
     def _set_subject(self):
         """ Remove subjects, if necessary. """
@@ -170,18 +170,24 @@ class KahData:
     def _set_betweenpac(self):
         """ Determine per-trial, between-channel PAC values based the direction (AB or BA) in which PAC is strongest for that trial. """
 
-        # Determine if PAC is stronger in direction AB or direction BA.
-        ab = self.stmc['normtspacAB'] > self.stmc['normtspacBA']
+        # Determine PAC values individually per time window.
+        timewins = ['pre', 'early', 'late']
+        for timewin in timewins:
+            # Set current time window.
+            colcurr = '{}rawpac'.format(timewin)
 
-        # Set PAC as that in the maximal direction.
-        # NOTE: Because PAC direction is set for individual trials, a pair could be TF in one trial and FT in another.
-        self.stmc['normtspacmax'] = np.maximum(self.stmc['normtspacAB'], self.stmc['normtspacBA'])
+            # Set PAC as that in the maximal direction.
+            # NOTE: Because PAC direction is set for individual trials, a pair could be TF in one trial and FT in another.
+            self.stmc[colcurr] = np.maximum(self.stmc[colcurr + 'AB'], self.stmc[colcurr + 'BA'])
 
-        # Construct lobe pair label using individual channel regions. This label corresponds to the AB direction.
-        lobepair = ['{}{}'.format(lobeA, lobeB) for lobeA, lobeB in zip(self.stmc['lobeA'], self.stmc['lobeB'])]
+            # Determine if PAC is stronger in direction AB or direction BA.
+            ab = self.stmc[colcurr + 'AB'] > self.stmc[colcurr + 'BA']
 
-        # Make a direction label using the region pair label. Flip the region pair label if PAC was stronger in the BA direction.
-        self.stmc['direction'] = [pair if ab_ else pair[::-1] for pair, ab_ in zip(lobepair, ab)]
+            # Construct region pair label using individual channel regions. This label corresponds to the AB direction.
+            regionpair = ['{}-{}'.format(regionA, regionB) for regionA, regionB in zip(self.stmc['regionA'], self.stmc['regionB'])]
+
+            # Make a direction label using the region pair label. Flip the region pair label if PAC was stronger in the BA direction.
+            self.stmc[colcurr + 'dir'] = [pair if ab_ else '{}-{}'.format(pair.split('-')[1], pair.split('-')[0]) for pair, ab_ in zip(regionpair, ab)]
 
 
 
