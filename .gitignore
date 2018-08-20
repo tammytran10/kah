@@ -9,3 +9,6 @@ python/fooof_old/
 kah_playground.m
 kah_plot_plotfilters.m
 *.mat
+*.pdf
+*.svg
+*.eps
