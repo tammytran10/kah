@@ -5,7 +5,7 @@ import numpy as np
 
 # Global variables for accessing data sets.
 SINGLECHAN = ['sc', 'stsc'] # single-channel data sets
-MULTICHAN  = ['mc', 'stmc'] # multi-channel data sets
+MULTICHAN  = ['stmc'] # multi-channel data sets
 DATASETS = [single for single in SINGLECHAN] + [multi for multi in MULTICHAN] # ['sc', 'stsc', 'stmc', 'mc']
 
 CHANNELS = [['channel'], ['channel'], ['channelA', 'channelB'], ['channelA', 'channelB']]
@@ -13,7 +13,7 @@ REGIONS = [['region'], ['region'], ['regionA', 'regionB'], ['regionA', 'regionB'
 LOBES = [['lobe'], ['lobe'], ['lobeA', 'lobeB'], ['lobeA', 'lobeB']]
 THETAS = [['thetachan'], ['thetachan'], ['thetachanA', 'thetachanB'], ['thetachanA', 'thetachanB']]
 
-SUBJECTS = ['R1020J', 'R1032D', 'R1033D', 'R1034D', 'R1045E', 'R1059J', 'R1075J', 'R1080E', 'R1135E', 'R1142N', 'R1147P', 'R1149N', 'R1154D', 'R1162N', 'R1166D', 'R1167M', 'R1175N']
+SUBJECTS = ['R1020J', 'R1034D', 'R1045E', 'R1059J', 'R1075J', 'R1080E', 'R1142N', 'R1149N', 'R1154D', 'R1162N', 'R1166D', 'R1167M', 'R1175N', 'R1001P', 'R1003P', 'R1006P', 'R1018P', 'R1036M', 'R1039M', 'R1060M', 'R1066P', 'R1067P', 'R1069M', 'R1086M', 'R1089P', 'R1112M', 'R1136N', 'R1177M']
 
 class KahData:
     """ Load Kahana data from CSV files. 
@@ -47,18 +47,14 @@ class KahData:
         Single-trial, multi-channel features. Examples include between-channel PAC.
     sc : Pandas Dataframe
         Single-channel features. Examples include p-values for theta power and HFA.
-    mc : Pandas Dataframe
-        Multi-channel features. Examples include p-values for between-channel PAC and phase encoding episode characteristics.
-
     """
 
     # Set path information.
     csvpath = '/Users/Rogue/Documents/Research/Projects/KAH/csv/'
     paths = {'stsc':csvpath + 'kah_singletrial_singlechannel.csv', 
              'stmc':csvpath + 'kah_singletrial_multichannel.csv',
-             'mc':csvpath + 'kah_multichannel.csv', 
              'sc':csvpath + 'kah_singlechannel.csv'}
-    
+
     # Load data from each CSV.
     for path in paths:
         exec(path + ' = pd.read_csv(paths[path])')
@@ -91,8 +87,9 @@ class KahData:
         self._set_subject()
         self._set_region()
         self._set_theta()
-        self._set_phasepair()
-        # self._set_betweenpac()
+        # self._set_phasepair()
+        self._set_betweenpac()
+        self._calculate_deltas()
 
     def _set_subject(self):
         """ Remove subjects, if necessary. """
@@ -182,12 +179,27 @@ class KahData:
 
             # Determine if PAC is stronger in direction AB or direction BA.
             ab = self.stmc[colcurr + 'AB'] > self.stmc[colcurr + 'BA']
+            self.stmc[colcurr + 'ABorBA'] = ab
 
             # Construct region pair label using individual channel regions. This label corresponds to the AB direction.
             regionpair = ['{}-{}'.format(regionA, regionB) for regionA, regionB in zip(self.stmc['regionA'], self.stmc['regionB'])]
 
             # Make a direction label using the region pair label. Flip the region pair label if PAC was stronger in the BA direction.
             self.stmc[colcurr + 'dir'] = [pair if ab_ else '{}-{}'.format(pair.split('-')[1], pair.split('-')[0]) for pair, ab_ in zip(regionpair, ab)]
+    
+    def _calculate_deltas(self):
+        timewins = ['early', 'late']
+
+        for feature in ['theta', 'hfa', 'slope', 'rawpac']:
+            for timewin in timewins:
+                colcurr = '{}{}'.format(timewin, feature)
+                baseline = 'pre{}'.format(feature)
+                self.stsc[colcurr + 'delta'] = self.stsc[colcurr] - self.stsc[baseline]
+
+        for timewin in timewins:
+            colcurr = '{}rawpac'.format(timewin)
+            baseline = [ab if aborba else ba for aborba, ab, ba in zip(self.stmc[colcurr + 'ABorBA'], self.stmc['prerawpacAB'], self.stmc['prerawpacBA'])]
+            self.stmc[colcurr + 'delta'] = self.stmc[colcurr] - baseline
 
 
 
